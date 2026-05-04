@@ -112,7 +112,7 @@ function Navbar() {
 
       {/* --- ÁREA DE LOGIN/CADASTRO --- */}
       {isGuest ? (
-        <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+        <div className="nav-auth">
             {/* Botão Cadastrar (Link simples) */}
             <Link 
                 to="/register" 

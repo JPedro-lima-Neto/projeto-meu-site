@@ -6,17 +6,15 @@ import Footer from '../components/Footer';
 import './PokemonPage.css';
 
 function PokemonPage() {
-  const [activeTab, setActiveTab] = useState('games'); // Começa mostrando seus Jogos
+  const [activeTab, setActiveTab] = useState('games');
   const [activeGeneration, setActiveGeneration] = useState(1);
-  
-  // Dados
+
   const [pokemonGames, setPokemonGames] = useState([]);
   const [pokedex, setPokedex] = useState([]);
-  
-  // Controle visual (Cinza vs Colorido)
+
   const [myCapturedIds, setMyCapturedIds] = useState(new Set());
   const [myShinyIds, setMyShinyIds] = useState(new Set());
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -31,42 +29,48 @@ function PokemonPage() {
     8: { name: 'Galar', start: 810, end: 905 },
     9: { name: 'Paldea', start: 906, end: 1025 },
   };
-  
+
   const totalGenerations = Object.keys(generationLimits).map(Number);
+
+  const getImageUrl = (img) => {
+    if (!img) return "https://via.placeholder.com/300x200?text=Sem+Imagem";
+    if (img.startsWith('http')) return img;
+    return `http://127.0.0.1:8000/${img}`;
+  };
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        
-        // Busca TUDO de uma vez
+
         const [gamesRes, dexRes, userRes] = await Promise.all([
-            api.get('library/'),      // Seus jogos
-            api.get('pokedex/'),      // Pokédex Global
-            api.get('user-pokemon/')  // O que você já marcou
+          api.get('library/'),
+          api.get('pokedex/'),
+          api.get('user-pokemon/')
         ]);
 
-        // 1. Processa Jogos (Filtra só Pokémon)
-        const gamesData = Array.isArray(gamesRes.data) ? gamesRes.data : (gamesRes.data.results || []);
+        // Jogos Pokémon
+        const gamesData = gamesRes.data.results || gamesRes.data;
         const pkmGames = gamesData.filter(entry => {
-           const title = entry.game_catalog?.title || entry.game?.title || "";
-           return title.toLowerCase().includes('pokemon') || title.toLowerCase().includes('pokémon');
+          const title = entry.game_catalog?.title || entry.game?.title || "";
+          return title.toLowerCase().includes('pokemon') || title.toLowerCase().includes('pokémon');
         });
+
         setPokemonGames(pkmGames);
 
-        // 2. Processa Pokédex
-        const rawDex = Array.isArray(dexRes.data) ? dexRes.data : (dexRes.data.results || []);
-        setPokedex(rawDex);
+        // Pokédex
+        const dexData = dexRes.data.results || dexRes.data;
+        setPokedex(dexData);
 
-        // 3. Processa Capturas (Quem é Normal e quem é Shiny)
-        const rawUser = Array.isArray(userRes.data) ? userRes.data : (userRes.data.results || []);
+        // Usuário
+        const userData = userRes.data.results || userRes.data;
         const captured = new Set();
         const shiny = new Set();
 
-        rawUser.forEach(u => {
-            const pid = u.pokemon.pokedex_id || u.pokemon;
-            if (u.is_shiny) shiny.add(pid);
-            else captured.add(pid);
+        userData.forEach(u => {
+          const id = u.pokemon.pokedex_id || u.pokemon;
+          if (u.is_shiny) shiny.add(id);
+          else captured.add(id);
         });
 
         setMyCapturedIds(captured);
@@ -78,181 +82,167 @@ function PokemonPage() {
         setLoading(false);
       }
     }
+
     fetchData();
   }, []);
 
   const toggleCapture = async (id, isShinyMode) => {
     const targetSet = isShinyMode ? myShinyIds : myCapturedIds;
-    
-    // Se já tiver, não faz nada (apenas visualiza)
+
     if (targetSet.has(id)) return;
 
     try {
-        await api.post('user-pokemon/', {
-            pokemon: id,
-            is_shiny: isShinyMode
-        });
+      await api.post('user-pokemon/', {
+        pokemon: id,
+        is_shiny: isShinyMode
+      });
 
-        // Atualiza visualmente na hora
-        if (isShinyMode) {
-            setMyShinyIds(prev => new Set(prev).add(id));
-        } else {
-            setMyCapturedIds(prev => new Set(prev).add(id));
-        }
+      if (isShinyMode) {
+        setMyShinyIds(prev => new Set(prev).add(id));
+      } else {
+        setMyCapturedIds(prev => new Set(prev).add(id));
+      }
+
     } catch (error) {
-        console.error("Erro ao salvar:", error);
+      console.error("Erro ao salvar:", error);
     }
   };
 
-  // Lógica de Filtros
   const currentGenInfo = generationLimits[activeGeneration];
-  const genStart = currentGenInfo.start;
-  const genEnd = currentGenInfo.end;
 
   const filteredDex = pokedex.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          String(p.pokedex_id).includes(searchTerm);
-    const matchesGen = p.pokedex_id >= genStart && p.pokedex_id <= genEnd;
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(p.pokedex_id).includes(searchTerm);
+
+    const matchesGen =
+      p.pokedex_id >= currentGenInfo.start &&
+      p.pokedex_id <= currentGenInfo.end;
+
     return matchesSearch && matchesGen;
   });
 
-  if (loading) return <div className="pokemon-page"><h2 style={{color:'#fff', textAlign:'center', paddingTop: 50}}>Carregando Portfólio Pokémon...</h2></div>;
+  if (loading) {
+    return (
+      <div className="pokemon-page">
+        <Navbar />
+        <h2 className="loading-text">Carregando Centro Pokémon...</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="pokemon-page">
       <Navbar />
 
+      {/* HEADER */}
       <header className="pokemon-header">
-        <h1>CENTRO POKÉMON</h1>
-        <p>Meu Portfólio Completo: Jogos e Capturas.</p>
+        <h1>Centro Pokémon</h1>
+        <p>Gerencie seus jogos e sua Pokédex pessoal</p>
 
         <div className="tabs-container">
-          <button 
-            className={`tab-btn ${activeTab === 'games' ? 'active' : ''}`}
-            onClick={() => setActiveTab('games')}
-          >
-            Meus Jogos
+          <button className={`tab-btn ${activeTab === 'games' ? 'active' : ''}`} onClick={() => setActiveTab('games')}>
+            🎮 Jogos
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'pokedex' ? 'active' : ''}`}
-            onClick={() => setActiveTab('pokedex')}
-          >
-            Pokédex Nacional
+          <button className={`tab-btn ${activeTab === 'pokedex' ? 'active' : ''}`} onClick={() => setActiveTab('pokedex')}>
+            📘 Pokédex
           </button>
-          <button 
-            className={`tab-btn ${activeTab === 'shiny' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shiny')}
-            >
-            Shiny Dex
+          <button className={`tab-btn ${activeTab === 'shiny' ? 'active' : ''}`} onClick={() => setActiveTab('shiny')}>
+            ✨ Shiny
           </button>
         </div>
       </header>
 
-      {/* --- ABA 1: MEUS JOGOS --- */}
+      {/* ABA JOGOS */}
       {activeTab === 'games' && (
         <div className="pokemon-grid">
           {pokemonGames.length === 0 ? (
-            <div className="empty-state-games">
-                <p>Nenhum jogo de Pokémon encontrado na sua biblioteca.</p>
-                <Link to="/consoles" style={{color: '#e100ff'}}>Adicionar jogo na biblioteca</Link>
+            <div className="empty-state">
+              <p>Nenhum jogo encontrado</p>
             </div>
           ) : (
             pokemonGames.map(entry => {
               const game = entry.game_catalog || entry.game;
-              // Assumindo que os dados do Hall da Fama vêm no objeto do jogo
-              const hallOfFame = game.hall_of_fame_entry; 
+              const hof = game.hall_of_fame_entry;
 
               return (
-                <Link to={`/boardgames/${entry.id}`} key={entry.id} className="pokemon-card-game">
-                    <div className="card-image-container">
-                        <img src={game.cover_image || game.cover_url} alt={game.title} className="game-cover" />
-                    </div>
-                    <div className="card-info">
-                        <h3>{game.title}</h3>
-                        <span className="platform-tag">{game.platform?.name || 'Console'}</span>
-                        
-                        {/* --- SEÇÃO HALL DA FAMA --- */}
-                        <div className="hall-of-fame-section">
-                          {hallOfFame ? (
-                            <>
-                              <h4>HALL DA FAMA</h4>
-                              <div className="team-sprites">
-                                {hallOfFame.sprite_1 && <img src={hallOfFame.sprite_1} alt="Pokémon 1" />}
-                                {hallOfFame.sprite_2 && <img src={hallOfFame.sprite_2} alt="Pokémon 2" />}
-                                {hallOfFame.sprite_3 && <img src={hallOfFame.sprite_3} alt="Pokémon 3" />}
-                                {hallOfFame.sprite_4 && <img src={hallOfFame.sprite_4} alt="Pokémon 4" />}
-                                {hallOfFame.sprite_5 && <img src={hallOfFame.sprite_5} alt="Pokémon 5" />}
-                                {hallOfFame.sprite_6 && <img src={hallOfFame.sprite_6} alt="Pokémon 6" />}
-                              </div>
-                            </>
-                          ) : (
-                            <p className="no-hof">Ainda não zerei / Sem registro</p>
+                <div key={entry.id} className="pokemon-card-game">
+                  <img src={getImageUrl(game.cover_image || game.cover_url)} />
+
+                  <div className="card-info">
+                    <h3>{game.title}</h3>
+
+                    <div className="hall-of-fame">
+                      {hof ? (
+                        <div className="team">
+                          {[1,2,3,4,5,6].map(i =>
+                            hof[`sprite_${i}`] && (
+                              <img key={i} src={hof[`sprite_${i}`]} />
+                            )
                           )}
                         </div>
-
+                      ) : (
+                        <span className="not-finished">Não finalizado</span>
+                      )}
                     </div>
-                </Link>
-              )
+
+                  </div>
+                </div>
+              );
             })
           )}
         </div>
       )}
 
-      {/* --- ABA 2 e 3: POKÉDEX & SHINY DEX --- */}
+      {/* ABA POKEDEX */}
       {(activeTab === 'pokedex' || activeTab === 'shiny') && (
         <div className="dex-container">
-          
-          <input 
-            type="text" 
-            placeholder="Buscar Pokémon (nome ou número)..." 
+
+          <input
             className="dex-search"
+            placeholder="Buscar Pokémon..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
 
           <div className="gen-selector">
-              {totalGenerations.map(genNum => (
-                  <button
-                      key={genNum}
-                      className={`gen-btn ${activeGeneration === genNum ? 'active-gen' : ''}`}
-                      onClick={() => setActiveGeneration(genNum)}
-                  >
-                      Gen {genNum}
-                  </button>
-              ))}
+            {totalGenerations.map(gen => (
+              <button
+                key={gen}
+                className={activeGeneration === gen ? 'active-gen' : ''}
+                onClick={() => setActiveGeneration(gen)}
+              >
+                Gen {gen}
+              </button>
+            ))}
           </div>
 
-          <h3 className="box-title">
-            {currentGenInfo.name} - 
-            {activeTab === 'shiny' ? <span style={{color: '#FFD700'}}> SHINY DEX</span> : <span style={{color: '#00f7ff'}}> POKÉDEX</span>}
-          </h3>
-          
           <div className="dex-grid">
-            {filteredDex.map((poke) => {
-              const isShinyMode = activeTab === 'shiny';
-              // Verifica se eu tenho
-              const isCaught = isShinyMode ? myShinyIds.has(poke.pokedex_id) : myCapturedIds.has(poke.pokedex_id);
-              const sprite = isShinyMode ? poke.shiny_sprite_url : poke.sprite_url;
+            {filteredDex.map(poke => {
+              const isShiny = activeTab === 'shiny';
+              const isCaught = isShiny
+                ? myShinyIds.has(poke.pokedex_id)
+                : myCapturedIds.has(poke.pokedex_id);
+
+              const sprite = isShiny
+                ? poke.shiny_sprite_url
+                : poke.sprite_url;
 
               return (
-                <div 
-                  key={poke.pokedex_id} 
-                  // Controla a cor (Cinza ou Colorido) via classe CSS
-                  className={`dex-card ${isCaught ? 'caught' : 'uncaptured'} ${isShinyMode ? 'shiny-mode' : ''}`}
-                  onClick={() => toggleCapture(poke.pokedex_id, isShinyMode)}
-                  title={isCaught ? "Capturado!" : "Clique para marcar"}
+                <div
+                  key={poke.pokedex_id}
+                  className={`dex-card ${isCaught ? 'caught' : 'uncaptured'} ${isShiny ? 'shiny' : ''}`}
+                  onClick={() => toggleCapture(poke.pokedex_id, isShiny)}
                 >
-                  <span className="dex-num">#{String(poke.pokedex_id).padStart(3, '0')}</span>
-                  
-                  <div className="sprite-container">
-                    <img src={sprite} alt={poke.name} loading="lazy" />
-                  </div>
-                  
-                  <span className="dex-name">{poke.name}</span>
-                  
-                  {isCaught && <div className="check-badge">✔</div>}
+                  <span>#{poke.pokedex_id}</span>
+
+                  <img src={sprite} />
+
+                  <p>{poke.name}</p>
+
+                  {isCaught && <div className="check">✔</div>}
                 </div>
-              )
+              );
             })}
           </div>
         </div>

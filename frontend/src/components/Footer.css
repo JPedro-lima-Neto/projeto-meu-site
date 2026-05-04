@@ -1,30 +1,103 @@
 .main-footer {
-    background-color: #0a0510;
-    padding: 30px 0;
-    margin-top: auto;
-    border-top: 1px solid #333;
+    background: #020617;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 60px;
+    color: #cbd5f5;
 }
-.footer-content {
+
+/* CONTAINER */
+.footer-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    padding: 50px 40px;
     max-width: 1200px;
     margin: 0 auto;
+}
+
+/* BRAND */
+.footer-brand h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.footer-brand p {
+    font-size: 0.9rem;
+    color: #94a3b8;
+}
+
+/* LINKS */
+.footer-links h4,
+.footer-social h4 {
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.footer-links a {
+    display: block;
+    text-decoration: none;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    transition: 0.2s;
+}
+
+.footer-links a:hover {
+    color: #fff;
+    transform: translateX(4px);
+}
+
+/* SOCIAL */
+.footer-social .social-icons {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    color: #888;
+    gap: 15px;
+    margin-bottom: 10px;
 }
-.footer-socials {
-    display: flex;
-    gap: 20px;
+
+.footer-social a {
+    color: #cbd5f5;
+    transition: 0.3s;
 }
-.footer-socials a {
-    color: #888;
-    transition: color 0.3s, transform 0.3s;
+
+/* RGB hover */
+.footer-social a:nth-child(3n+1):hover {
+    color: #ef4444;
+    text-shadow: 0 0 10px rgba(239,68,68,0.7);
 }
-.footer-socials a:hover {
-    color: #00BFFF;
-    transform: scale(1.2);
+
+.footer-social a:nth-child(3n+2):hover {
+    color: #22c55e;
+    text-shadow: 0 0 10px rgba(34,197,94,0.7);
 }
-@media (max-width: 600px) {
-    .footer-content { flex-direction: column; gap: 15px; text-align: center; }
+
+.footer-social a:nth-child(3n+3):hover {
+    color: #3b82f6;
+    text-shadow: 0 0 10px rgba(59,130,246,0.7);
+}
+
+.footer-email {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* BASE */
+.footer-bottom {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    text-align: center;
+    padding: 15px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+    .footer-container {
+        padding: 40px 20px;
+        text-align: center;
+    }
+
+    .footer-social .social-icons {
+        justify-content: center;
+    }
 }
