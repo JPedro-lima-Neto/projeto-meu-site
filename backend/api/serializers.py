@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from django.contrib.auth.models import User
 
@@ -11,6 +13,8 @@ from .models import (
     PokemonHallOfFame,
     Console,
     BoardGame,
+    BoardGameCatalog,
+    UserBoardGame,
     UserProfile,
     Achievement,
     Follow,
@@ -37,6 +41,7 @@ class GameCatalogSerializer(serializers.ModelSerializer):
     class Meta:
         model = GameCatalog
         fields = '__all__'
+
         read_only_fields = [
             'created_by',
         ]
@@ -261,11 +266,9 @@ class UserOwnedGameSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    ownership_type_display = (
-        serializers.CharField(
-            source='get_ownership_type_display',
-            read_only=True
-        )
+    ownership_type_display = serializers.CharField(
+        source='get_ownership_type_display',
+        read_only=True
     )
 
     class Meta:
@@ -377,6 +380,10 @@ class ConsoleSerializer(serializers.ModelSerializer):
         ]
 
 
+# =========================================================
+# BOARD GAMES - MODELO ANTIGO
+# =========================================================
+
 class BoardGameSerializer(serializers.ModelSerializer):
     class Meta:
         model = BoardGame
@@ -385,6 +392,179 @@ class BoardGameSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'user',
         ]
+
+
+# =========================================================
+# BOARD GAMES - CATÁLOGO
+# =========================================================
+
+class BoardGameCatalogSerializer(
+    serializers.ModelSerializer
+):
+    play_time = serializers.CharField(
+        read_only=True
+    )
+
+    player_count = serializers.CharField(
+        read_only=True
+    )
+
+    class Meta:
+        model = BoardGameCatalog
+
+        fields = [
+            'id',
+            'bgg_id',
+            'name',
+            'original_name',
+            'description',
+            'cover_image',
+            'cover_url',
+            'thumbnail_url',
+            'year',
+            'min_players',
+            'max_players',
+            'player_count',
+            'min_play_time',
+            'max_play_time',
+            'play_time',
+            'min_age',
+            'publisher',
+            'publishers',
+            'categories',
+            'mechanics',
+            'designers',
+            'artists',
+            'bgg_rating',
+            'bgg_weight',
+            'rules',
+            'imported_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'imported_at',
+            'updated_at',
+        ]
+
+
+# =========================================================
+# BOARD GAMES - RELAÇÃO DO USUÁRIO
+# =========================================================
+
+class UserBoardGameSerializer(
+    serializers.ModelSerializer
+):
+    game = BoardGameCatalogSerializer(
+        read_only=True
+    )
+
+    game_id = serializers.PrimaryKeyRelatedField(
+        source='game',
+        queryset=BoardGameCatalog.objects.all(),
+        write_only=True
+    )
+
+    username = serializers.CharField(
+        source='user.username',
+        read_only=True
+    )
+
+    class Meta:
+        model = UserBoardGame
+
+        fields = [
+            'id',
+            'user',
+            'username',
+            'game',
+            'game_id',
+            'owned',
+            'played',
+            'rating',
+            'acquired_at',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'user',
+            'username',
+            'created_at',
+            'updated_at',
+        ]
+
+    def validate_rating(self, value):
+        if value is None:
+            return value
+
+        value = Decimal(str(value))
+
+        if value < Decimal('0.0'):
+            raise serializers.ValidationError(
+                'A nota não pode ser menor que 0.'
+            )
+
+        if value > Decimal('10.0'):
+            raise serializers.ValidationError(
+                'A nota não pode ser maior que 10.'
+            )
+
+        if value % Decimal('0.5') != 0:
+            raise serializers.ValidationError(
+                'A nota deve variar de 0,5 em 0,5.'
+            )
+
+        return value
+
+    def validate(self, attrs):
+        owned = attrs.get(
+            'owned',
+            getattr(
+                self.instance,
+                'owned',
+                False
+            )
+        )
+
+        played = attrs.get(
+            'played',
+            getattr(
+                self.instance,
+                'played',
+                True
+            )
+        )
+
+        if (
+            not owned
+            and not played
+        ):
+            raise serializers.ValidationError(
+                {
+                    'non_field_errors': [
+                        (
+                            'O jogo precisa estar '
+                            'na coleção ou ter sido '
+                            'jogado.'
+                        )
+                    ]
+                }
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        validated_data['user'] = (
+            self.context[
+                'request'
+            ].user
+        )
+
+        return super().create(
+            validated_data
+        )
 
 
 class PokemonSerializer(serializers.ModelSerializer):

@@ -695,20 +695,17 @@ function ConsolesPage() {
               ?.name ||
             '';
 
+          if (!platformName) {
+            return false;
+          }
+
           const normalizedPlatform =
             normalizeConsoleName(
               platformName
             );
 
-          return aliases.some(
-            (alias) =>
-              normalizedPlatform === alias ||
-              normalizedPlatform.includes(
-                alias
-              ) ||
-              alias.includes(
-                normalizedPlatform
-              )
+          return aliases.includes(
+            normalizedPlatform
           );
         });
 
@@ -854,7 +851,7 @@ function ConsolesPage() {
   return (
     <div
       className={`
-        consoles-page
+        consoles-theme
         ${
           selectedConsole
             ? `console-theme-active theme-${selectedConsole.key}`
@@ -866,638 +863,651 @@ function ConsolesPage() {
 
       <Navbar />
 
-      <main className="consoles-main">
+      <div
+        className={`
+          consoles-page
+          ${
+            selectedConsole
+              ? 'console-theme-active'
+              : ''
+          }
+        `}
+      >
 
-        {!selectedConsole && (
-          <section className="consoles-hero">
+        <main className="consoles-main">
 
-            <div className="hero-badge">
-              <Cpu size={16} />
-              HARDWARE COLLECTION
-            </div>
+          {!selectedConsole && (
+            <section className="consoles-hero">
 
-            <h1>
-              Minha coleção de
-              <span> consoles.</span>
-            </h1>
+              <div className="hero-badge">
+                <Cpu size={16} />
+                HARDWARE COLLECTION
+              </div>
 
-            <p>
-              Uma vitrine através das gerações
-              de PlayStation, Nintendo e Xbox.
-              Os consoles destacados fazem
-              parte da minha coleção.
-            </p>
-
-            <div className="hero-info">
-              <Gamepad2 size={20} />
-
-              <strong>
-                {consoles.length}
-              </strong>
-
-              <span>
-                consoles na coleção
-              </span>
-            </div>
-
-          </section>
-        )}
-
-        <section className="console-showcase">
-
-          {loading ? (
-            <div className="console-loading">
-
-              <div className="loader"></div>
+              <h1>
+                Minha coleção de
+                <span> consoles.</span>
+              </h1>
 
               <p>
-                Carregando coleção...
+                Uma vitrine através das gerações
+                de PlayStation, Nintendo e Xbox.
+                Os consoles destacados fazem
+                parte da minha coleção.
               </p>
 
-            </div>
-          ) : (
-            <>
+              <div className="hero-info">
+                <Gamepad2 size={20} />
 
-              {!selectedConsole && (
-                <div className="brands-showcase">
+                <strong>
+                  {consoles.length}
+                </strong>
 
-                  {consoleCatalog.map(
-                    (brand) => (
-                      <section
-                        key={brand.brand}
-                        className={
-                          `brand-section ${brand.className}`
-                        }
-                      >
+                <span>
+                  consoles na coleção
+                </span>
+              </div>
 
-                        <div className="brand-header">
+            </section>
+          )}
 
-                          <div>
+          <section className="console-showcase">
 
-                            <span className="brand-small">
-                              ECOSSISTEMA
-                            </span>
+            {loading ? (
+              <div className="console-loading">
 
-                            <h2>
-                              {brand.brand}
-                            </h2>
+                <div className="loader"></div>
+
+                <p>
+                  Carregando coleção...
+                </p>
+
+              </div>
+            ) : (
+              <>
+
+                {!selectedConsole && (
+                  <div className="brands-showcase">
+
+                    {consoleCatalog.map(
+                      (brand) => (
+                        <section
+                          key={brand.brand}
+                          className={
+                            `brand-section ${brand.className}`
+                          }
+                        >
+
+                          <div className="brand-header">
+
+                            <div>
+
+                              <span className="brand-small">
+                                ECOSSISTEMA
+                              </span>
+
+                              <h2>
+                                {brand.brand}
+                              </h2>
+
+                            </div>
+
+                            <span className="brand-line"></span>
 
                           </div>
 
-                          <span className="brand-line"></span>
+                          <div className="brand-consoles">
 
-                        </div>
+                            {brand.consoles.map(
+                              (catalogConsole) => {
 
-                        <div className="brand-consoles">
+                                const ownedConsole =
+                                  findOwnedConsole(
+                                    catalogConsole
+                                  );
 
-                          {brand.consoles.map(
-                            (catalogConsole) => {
+                                const owned =
+                                  Boolean(
+                                    ownedConsole
+                                  );
 
-                              const ownedConsole =
-                                findOwnedConsole(
-                                  catalogConsole
-                                );
+                                const consoleImage =
+                                  getConsoleImage(
+                                    catalogConsole
+                                  );
 
-                              const owned =
-                                Boolean(
-                                  ownedConsole
-                                );
-
-                              const consoleImage =
-                                getConsoleImage(
-                                  catalogConsole
-                                );
-
-                              return (
-                                <article
-                                  key={
-                                    catalogConsole.key
-                                  }
-                                  className={`
-                                    showcase-console
-                                    ${catalogConsole.key}
-                                    ${
-                                      owned
-                                        ? 'owned'
-                                        : 'not-owned'
+                                return (
+                                  <article
+                                    key={
+                                      catalogConsole.key
                                     }
-                                    clickable
-                                  `}
-                                  onClick={() =>
-                                    handleConsoleClick(
-                                      catalogConsole,
-                                      ownedConsole,
-                                      brand.brand
-                                    )
-                                  }
-                                >
-
-                                  <div className="console-status">
-
-                                    {owned ? (
-                                      <>
-                                        <Check
-                                          size={14}
-                                        />
-
-                                        NA COLEÇÃO
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Minus
-                                          size={13}
-                                        />
-
-                                        NÃO POSSUO
-                                      </>
-                                    )}
-
-                                  </div>
-
-                                  <div className="showcase-image">
-
-                                    <div className="showcase-glow"></div>
-
-                                    {consoleImage ? (
-                                      <img
-                                        src={
-                                          consoleImage
-                                        }
-                                        alt={
-                                          catalogConsole.name
-                                        }
-                                        className={
-                                          owned
-                                            ? 'owned-console-image'
-                                            : 'locked-console-image'
-                                        }
-                                      />
-                                    ) : (
-                                      <div className="console-placeholder">
-
-                                        <Gamepad2
-                                          size={45}
-                                        />
-
-                                      </div>
-                                    )}
-
-                                  </div>
-
-                                  <div className="showcase-info">
-
-                                    <span>
-                                      {brand.brand}
-                                    </span>
-
-                                    <h3>
-                                      {
-                                        catalogConsole.shortName
+                                    className={`
+                                      showcase-console
+                                      ${catalogConsole.key}
+                                      ${
+                                        owned
+                                          ? 'owned'
+                                          : 'not-owned'
                                       }
-                                    </h3>
+                                      clickable
+                                    `}
+                                    onClick={() =>
+                                      handleConsoleClick(
+                                        catalogConsole,
+                                        ownedConsole,
+                                        brand.brand
+                                      )
+                                    }
+                                  >
 
-                                    <button
-                                      className="explore-console"
-                                      type="button"
-                                      onClick={(event) => {
+                                    <div className="console-status">
 
-                                        event.stopPropagation();
+                                      {owned ? (
+                                        <>
+                                          <Check
+                                            size={14}
+                                          />
 
-                                        handleConsoleClick(
-                                          catalogConsole,
-                                          ownedConsole,
-                                          brand.brand
-                                        );
-                                      }}
-                                    >
-                                      Explorar
-                                    </button>
+                                          NA COLEÇÃO
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Minus
+                                            size={13}
+                                          />
 
-                                  </div>
+                                          NÃO POSSUO
+                                        </>
+                                      )}
 
-                                </article>
-                              );
-                            }
-                          )}
+                                    </div>
 
-                        </div>
+                                    <div className="showcase-image">
 
-                      </section>
-                    )
-                  )}
+                                      <div className="showcase-glow"></div>
 
-                </div>
-              )}
+                                      {consoleImage ? (
+                                        <img
+                                          src={
+                                            consoleImage
+                                          }
+                                          alt={
+                                            catalogConsole.name
+                                          }
+                                          className={
+                                            owned
+                                              ? 'owned-console-image'
+                                              : 'locked-console-image'
+                                          }
+                                        />
+                                      ) : (
+                                        <div className="console-placeholder">
 
-              {selectedConsole && (
-                <section className="selected-console-section">
+                                          <Gamepad2
+                                            size={45}
+                                          />
 
-                  <button
-                    type="button"
-                    className="back-to-consoles"
-                    onClick={handleBack}
-                  >
-                    <ArrowLeft size={18} />
-                    Voltar para a vitrine
-                  </button>
+                                        </div>
+                                      )}
 
-                  <div className="selected-console-header">
+                                    </div>
 
-                    <div className="selected-console-text">
+                                    <div className="showcase-info">
 
-                      <span>
-                        {selectedConsole.brand}
-                      </span>
+                                      <span>
+                                        {brand.brand}
+                                      </span>
 
-                      <h2>
-                        {
-                          selectedConsole.shortName
-                        }
-                      </h2>
+                                      <h3>
+                                        {
+                                          catalogConsole.shortName
+                                        }
+                                      </h3>
 
-                      <p>
-                        Minha coleção de jogos
-                      </p>
+                                      <button
+                                        className="explore-console"
+                                        type="button"
+                                        onClick={(event) => {
 
-                      <div className="selected-games-count">
+                                          event.stopPropagation();
 
-                        <strong>
-                          {games.length}
-                        </strong>
+                                          handleConsoleClick(
+                                            catalogConsole,
+                                            ownedConsole,
+                                            brand.brand
+                                          );
+                                        }}
+                                      >
+                                        Explorar
+                                      </button>
 
-                        <span>
-                          {games.length === 1
-                            ? 'jogo'
-                            : 'jogos'}
-                        </span>
+                                    </div>
 
-                      </div>
+                                  </article>
+                                );
+                              }
+                            )}
 
-                    </div>
+                          </div>
 
-                    {getConsoleImage(
-                      selectedConsole
-                    ) && (
-                      <div className="selected-console-image">
-
-                        <div className="selected-console-glow"></div>
-
-                        <img
-                          src={
-                            getConsoleImage(
-                              selectedConsole
-                            )
-                          }
-                          alt={
-                            selectedConsole.shortName
-                          }
-                          className={
-                            selectedConsole.ownedData
-                              ? 'owned-console-image'
-                              : 'locked-console-image'
-                          }
-                        />
-
-                      </div>
+                        </section>
+                      )
                     )}
 
                   </div>
+                )}
 
-                  <div className="games-title">
+                {selectedConsole && (
+                  <section className="selected-console-section">
 
-                    <div>
+                    <button
+                      type="button"
+                      className="back-to-consoles"
+                      onClick={handleBack}
+                    >
+                      <ArrowLeft size={18} />
+                      Voltar para a vitrine
+                    </button>
 
-                      <span>
-                        BIBLIOTECA
-                      </span>
+                    <div className="selected-console-header">
 
-                      <h3>
-                        Meus jogos
-                      </h3>
+                      <div className="selected-console-text">
 
-                    </div>
+                        <span>
+                          {selectedConsole.brand}
+                        </span>
 
-                    <div className="games-title-line"></div>
+                        <h2>
+                          {
+                            selectedConsole.shortName
+                          }
+                        </h2>
 
-                  </div>
+                        <p>
+                          Minha coleção de jogos
+                        </p>
 
-                  {gamesLoading ? (
-                    <div className="console-loading">
+                        <div className="selected-games-count">
 
-                      <div className="loader"></div>
+                          <strong>
+                            {games.length}
+                          </strong>
 
-                      <p>
-                        Carregando jogos...
-                      </p>
+                          <span>
+                            {games.length === 1
+                              ? 'jogo'
+                              : 'jogos'}
+                          </span>
 
-                    </div>
-                  ) : currentGame ? (
-                    <div className="game-carousel">
+                        </div>
 
-                      <div className="game-carousel-stage">
+                      </div>
 
-                        {games.length > 1 && (
-                          <button
-                            type="button"
-                            className="
-                              game-carousel-arrow
-                              game-carousel-arrow-left
-                            "
-                            onClick={
-                              handlePreviousGame
+                      {getConsoleImage(
+                        selectedConsole
+                      ) && (
+                        <div className="selected-console-image">
+
+                          <div className="selected-console-glow"></div>
+
+                          <img
+                            src={
+                              getConsoleImage(
+                                selectedConsole
+                              )
                             }
-                            aria-label="Jogo anterior"
-                          >
-                            <ChevronLeft
-                              size={30}
-                            />
-                          </button>
-                        )}
+                            alt={
+                              selectedConsole.shortName
+                            }
+                            className={
+                              selectedConsole.ownedData
+                                ? 'owned-console-image'
+                                : 'locked-console-image'
+                            }
+                          />
 
-                        <div className="game-carousel-content">
+                        </div>
+                      )}
 
-                          <div className="game-carousel-cover-side">
+                    </div>
 
-                            <div className="game-carousel-cover-glow"></div>
+                    <div className="games-title">
+
+                      <div>
+
+                        <span>
+                          BIBLIOTECA
+                        </span>
+
+                        <h3>
+                          Meus jogos
+                        </h3>
+
+                      </div>
+
+                      <div className="games-title-line"></div>
+
+                    </div>
+
+                    {gamesLoading ? (
+                      <div className="console-loading">
+
+                        <div className="loader"></div>
+
+                        <p>
+                          Carregando jogos...
+                        </p>
+
+                      </div>
+                    ) : currentGame ? (
+                      <div className="game-carousel">
+
+                        <div className="game-carousel-stage">
+
+                          {games.length > 1 && (
+                            <button
+                              type="button"
+                              className="
+                                game-carousel-arrow
+                                game-carousel-arrow-left
+                              "
+                              onClick={
+                                handlePreviousGame
+                              }
+                              aria-label="Jogo anterior"
+                            >
+                              <ChevronLeft
+                                size={30}
+                              />
+                            </button>
+                          )}
+
+                          <div className="game-carousel-content">
+
+                            <div className="game-carousel-cover-side">
+
+                              <div className="game-carousel-cover-glow"></div>
+
+                              <div
+                                className="game-carousel-cover"
+                                key={
+                                  `cover-${currentGame.id}`
+                                }
+                              >
+
+                                {currentGameCover ? (
+                                  <img
+                                    src={
+                                      currentGameCover.startsWith(
+                                        'http'
+                                      )
+                                        ? currentGameCover
+                                        : getImageUrl(
+                                            currentGameCover
+                                          )
+                                    }
+                                    alt={
+                                      currentGameData?.title
+                                    }
+                                  />
+                                ) : (
+                                  <div className="game-carousel-no-cover">
+
+                                    <Gamepad2
+                                      size={70}
+                                    />
+
+                                  </div>
+                                )}
+
+                              </div>
+
+                            </div>
 
                             <div
-                              className="game-carousel-cover"
+                              className="game-carousel-details"
                               key={
-                                `cover-${currentGame.id}`
+                                `details-${currentGame.id}`
                               }
                             >
 
-                              {currentGameCover ? (
-                                <img
-                                  src={
-                                    currentGameCover.startsWith(
-                                      'http'
-                                    )
-                                      ? currentGameCover
-                                      : getImageUrl(
-                                          currentGameCover
-                                        )
-                                  }
-                                  alt={
-                                    currentGameData?.title
-                                  }
+                              <div className="game-carousel-eyebrow">
+
+                                <Gamepad2
+                                  size={15}
                                 />
-                              ) : (
-                                <div className="game-carousel-no-cover">
 
-                                  <Gamepad2
-                                    size={70}
-                                  />
+                                JOGO DA COLEÇÃO
 
-                                </div>
+                              </div>
+
+                              <h2>
+                                {
+                                  currentGameData?.title
+                                }
+                              </h2>
+
+                              {currentGameData?.genre && (
+                                <p className="game-carousel-genre">
+                                  {
+                                    currentGameData.genre
+                                  }
+                                </p>
                               )}
 
-                            </div>
+                              <div className="game-carousel-metadata">
 
-                          </div>
+                                <div className="game-meta-item">
 
-                          <div
-                            className="game-carousel-details"
-                            key={
-                              `details-${currentGame.id}`
-                            }
-                          >
+                                  <div className="game-meta-icon">
+                                    <Monitor
+                                      size={18}
+                                    />
+                                  </div>
 
-                            <div className="game-carousel-eyebrow">
+                                  <div>
 
-                              <Gamepad2
-                                size={15}
-                              />
+                                    <span>
+                                      Plataforma
+                                    </span>
 
-                              JOGO DA COLEÇÃO
-
-                            </div>
-
-                            <h2>
-                              {
-                                currentGameData?.title
-                              }
-                            </h2>
-
-                            {currentGameData?.genre && (
-                              <p className="game-carousel-genre">
-                                {
-                                  currentGameData.genre
-                                }
-                              </p>
-                            )}
-
-                            <div className="game-carousel-metadata">
-
-                              <div className="game-meta-item">
-
-                                <div className="game-meta-icon">
-                                  <Monitor
-                                    size={18}
-                                  />
-                                </div>
-
-                                <div>
-
-                                  <span>
-                                    Plataforma
-                                  </span>
-
-                                  <strong>
-                                    {
-                                      currentGame
-                                        .platform
-                                        ?.name
-                                    }
-                                  </strong>
-
-                                </div>
-
-                              </div>
-
-                              <div className="game-meta-item">
-
-                                <div className="game-meta-icon">
-                                  <CalendarDays
-                                    size={18}
-                                  />
-                                </div>
-
-                                <div>
-
-                                  <span>
-                                    Ano
-                                  </span>
-
-                                  <strong>
-                                    {
-                                      currentGameData
-                                        ?.release_year ||
-                                      'Não informado'
-                                    }
-                                  </strong>
-
-                                </div>
-
-                              </div>
-
-                              <div className="game-meta-item">
-
-                                <div className="game-meta-icon">
-                                  <Disc3
-                                    size={18}
-                                  />
-                                </div>
-
-                                <div>
-
-                                  <span>
-                                    Formato
-                                  </span>
-
-                                  <strong>
-                                    {
-                                      currentGame
-                                        .ownership_type_display ||
-                                      (
+                                    <strong>
+                                      {
                                         currentGame
-                                          .ownership_type ===
-                                        'FISICO'
-                                          ? 'Físico'
-                                          : 'Digital'
+                                          .platform
+                                          ?.name
+                                      }
+                                    </strong>
+
+                                  </div>
+
+                                </div>
+
+                                <div className="game-meta-item">
+
+                                  <div className="game-meta-icon">
+                                    <CalendarDays
+                                      size={18}
+                                    />
+                                  </div>
+
+                                  <div>
+
+                                    <span>
+                                      Ano
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        currentGameData
+                                          ?.release_year ||
+                                        'Não informado'
+                                      }
+                                    </strong>
+
+                                  </div>
+
+                                </div>
+
+                                <div className="game-meta-item">
+
+                                  <div className="game-meta-icon">
+                                    <Disc3
+                                      size={18}
+                                    />
+                                  </div>
+
+                                  <div>
+
+                                    <span>
+                                      Formato
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        currentGame
+                                          .ownership_type_display ||
+                                        (
+                                          currentGame
+                                            .ownership_type ===
+                                          'FISICO'
+                                            ? 'Físico'
+                                            : 'Digital'
+                                        )
+                                      }
+                                    </strong>
+
+                                  </div>
+
+                                </div>
+
+                                <div className="game-meta-item">
+
+                                  <div className="game-meta-icon">
+
+                                    {currentGame.completed ? (
+                                      <Trophy
+                                        size={18}
+                                      />
+                                    ) : (
+                                      <Circle
+                                        size={18}
+                                      />
+                                    )}
+
+                                  </div>
+
+                                  <div>
+
+                                    <span>
+                                      Progresso
+                                    </span>
+
+                                    <strong>
+                                      {
+                                        currentGame.completed
+                                          ? 'Zerado'
+                                          : 'Não zerado'
+                                      }
+                                    </strong>
+
+                                  </div>
+
+                                </div>
+
+                              </div>
+
+                              <div className="game-carousel-footer">
+
+                                <div className="game-carousel-counter">
+
+                                  <strong>
+                                    {
+                                      formatGameNumber(
+                                        currentGameIndex + 1
                                       )
                                     }
                                   </strong>
 
-                                </div>
-
-                              </div>
-
-                              <div className="game-meta-item">
-
-                                <div className="game-meta-icon">
-
-                                  {currentGame.completed ? (
-                                    <Trophy
-                                      size={18}
-                                    />
-                                  ) : (
-                                    <Circle
-                                      size={18}
-                                    />
-                                  )}
-
-                                </div>
-
-                                <div>
-
                                   <span>
-                                    Progresso
+                                    /
                                   </span>
 
-                                  <strong>
+                                  <span>
                                     {
-                                      currentGame.completed
-                                        ? 'Zerado'
-                                        : 'Não zerado'
+                                      formatGameNumber(
+                                        games.length
+                                      )
                                     }
-                                  </strong>
+                                  </span>
 
                                 </div>
 
-                              </div>
-
-                            </div>
-
-                            <div className="game-carousel-footer">
-
-                              <div className="game-carousel-counter">
-
-                                <strong>
-                                  {
-                                    formatGameNumber(
-                                      currentGameIndex + 1
-                                    )
-                                  }
-                                </strong>
-
-                                <span>
-                                  /
-                                </span>
-
-                                <span>
-                                  {
-                                    formatGameNumber(
-                                      games.length
-                                    )
-                                  }
-                                </span>
+                                {games.length > 1 && (
+                                  <span className="game-carousel-hint">
+                                    Use ← → para navegar
+                                  </span>
+                                )}
 
                               </div>
-
-                              {games.length > 1 && (
-                                <span className="game-carousel-hint">
-                                  Use ← → para navegar
-                                </span>
-                              )}
 
                             </div>
 
                           </div>
 
+                          {games.length > 1 && (
+                            <button
+                              type="button"
+                              className="
+                                game-carousel-arrow
+                                game-carousel-arrow-right
+                              "
+                              onClick={
+                                handleNextGame
+                              }
+                              aria-label="Próximo jogo"
+                            >
+                              <ChevronRight
+                                size={30}
+                              />
+                            </button>
+                          )}
+
                         </div>
 
-                        {games.length > 1 && (
-                          <button
-                            type="button"
-                            className="
-                              game-carousel-arrow
-                              game-carousel-arrow-right
-                            "
-                            onClick={
-                              handleNextGame
-                            }
-                            aria-label="Próximo jogo"
-                          >
-                            <ChevronRight
-                              size={30}
-                            />
-                          </button>
-                        )}
+                      </div>
+                    ) : (
+                      <div className="no-console-games">
+
+                        <Gamepad2
+                          size={50}
+                        />
+
+                        <h3>
+                          Nenhum jogo na coleção
+                        </h3>
+
+                        <p>
+                          Você ainda não possui
+                          nenhum jogo físico ou
+                          digital cadastrado para
+                          este console.
+                        </p>
 
                       </div>
+                    )}
 
-                    </div>
-                  ) : (
-                    <div className="no-console-games">
+                  </section>
+                )}
 
-                      <Gamepad2
-                        size={50}
-                      />
+              </>
+            )}
 
-                      <h3>
-                        Nenhum jogo na coleção
-                      </h3>
+          </section>
 
-                      <p>
-                        Você ainda não possui
-                        nenhum jogo físico ou
-                        digital cadastrado para
-                        este console.
-                      </p>
+        </main>
 
-                    </div>
-                  )}
-
-                </section>
-              )}
-
-            </>
-          )}
-
-        </section>
-
-      </main>
+      </div>
 
       <Footer />
 

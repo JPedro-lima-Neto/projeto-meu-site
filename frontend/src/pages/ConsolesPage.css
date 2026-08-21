@@ -1,3 +1,25 @@
+.consoles-theme {
+  --footer-bg: #05070b;
+  --footer-border: rgba(255, 255, 255, 0.08);
+  --footer-text: #cbd5f5;
+  --footer-heading: #ffffff;
+  --footer-muted: #8b93a4;
+  --footer-subtle: #626b7d;
+  --footer-accent: #4b89ff;
+  --footer-bottom-border: rgba(255, 255, 255, 0.05);
+
+  --navbar-bg: #05070b;
+  --navbar-border: rgba(255, 255, 255, 0.08);
+  --navbar-text: #dfe5f2;
+  --navbar-muted: #8b93a4;
+  --navbar-accent: #4b89ff;
+
+  min-height: 100vh;
+
+  background: #05070b;
+
+  color: #f4f5f7;
+}
 .consoles-page {
   position: relative;
   min-height: 100vh;

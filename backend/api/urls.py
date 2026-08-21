@@ -17,6 +17,8 @@ from .views import (
     PokemonHallOfFameViewSet,
     ConsoleViewSet,
     BoardGameViewSet,
+    BoardGameCatalogViewSet,
+    UserBoardGameViewSet,
     UserProfileViewSet,
     AchievementViewSet,
     CustomAuthToken,
@@ -24,6 +26,7 @@ from .views import (
 
 
 router = DefaultRouter()
+
 
 router.register(
     r'platforms',
@@ -64,11 +67,43 @@ router.register(
     basename='consoles'
 )
 
+
+# =========================================================
+# BOARD GAMES - MODELO ANTIGO
+# =========================================================
+
 router.register(
     r'boardgames',
     BoardGameViewSet,
     basename='boardgames'
 )
+
+
+# =========================================================
+# BOARD GAMES - NOVO CATÁLOGO / BGG
+# =========================================================
+
+router.register(
+    r'boardgame-catalog',
+    BoardGameCatalogViewSet,
+    basename='boardgame-catalog'
+)
+
+
+# =========================================================
+# BOARD GAMES - COLEÇÃO DO USUÁRIO
+# =========================================================
+
+router.register(
+    r'user-boardgames',
+    UserBoardGameViewSet,
+    basename='user-boardgames'
+)
+
+
+# =========================================================
+# POKÉMON
+# =========================================================
 
 router.register(
     r'pokedex',

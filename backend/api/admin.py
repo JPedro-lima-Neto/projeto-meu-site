@@ -1,4 +1,10 @@
 from django.contrib import admin
+from django.urls import path
+from django.shortcuts import (
+    render,
+    redirect,
+)
+from django.contrib import messages
 
 from .models import (
     Platform,
@@ -10,8 +16,16 @@ from .models import (
     PokemonHallOfFame,
     Console,
     BoardGame,
+    BoardGameCatalog,
+    UserBoardGame,
     UserProfile,
     Achievement,
+)
+
+from .views import (
+    request_bgg,
+    parse_bgg_search,
+    parse_bgg_game,
 )
 
 
@@ -190,4 +204,372 @@ class BoardGameAdmin(admin.ModelAdmin):
         'name',
         'publisher',
         'user__username',
+    )
+
+
+@admin.register(BoardGameCatalog)
+class BoardGameCatalogAdmin(admin.ModelAdmin):
+    list_display = (
+        'name',
+        'bgg_id',
+        'year',
+        'publisher',
+        'min_players',
+        'max_players',
+        'bgg_rating',
+    )
+
+    list_filter = (
+        'year',
+        'publisher',
+    )
+
+    search_fields = (
+        'name',
+        'publisher',
+        'bgg_id',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    readonly_fields = (
+        'bgg_id',
+        'name',
+        'original_name',
+        'description',
+        'cover_url',
+        'thumbnail_url',
+        'year',
+        'min_players',
+        'max_players',
+        'min_play_time',
+        'max_play_time',
+        'min_age',
+        'publisher',
+        'publishers',
+        'categories',
+        'mechanics',
+        'designers',
+        'artists',
+        'bgg_rating',
+        'bgg_weight',
+        'imported_at',
+        'updated_at',
+    )
+
+    fieldsets = (
+        (
+            'Informações importadas',
+            {
+                'fields': (
+                    'bgg_id',
+                    'name',
+                    'original_name',
+                    'description',
+                    'cover_image',
+                    'cover_url',
+                    'thumbnail_url',
+                    'year',
+                    'min_players',
+                    'max_players',
+                    'min_play_time',
+                    'max_play_time',
+                    'min_age',
+                    'publisher',
+                    'publishers',
+                    'categories',
+                    'mechanics',
+                    'designers',
+                    'artists',
+                    'bgg_rating',
+                    'bgg_weight',
+                    'rules',
+                )
+            }
+        ),
+        (
+            'Sistema',
+            {
+                'fields': (
+                    'imported_at',
+                    'updated_at',
+                )
+            }
+        ),
+    )
+
+    change_list_template = (
+        'admin/boardgame_catalog_changelist.html'
+    )
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        custom_urls = [
+            path(
+                'importar-bgg/',
+                self.admin_site.admin_view(
+                    self.import_bgg_view
+                ),
+                name='boardgamecatalog_import_bgg',
+            ),
+        ]
+
+        return custom_urls + urls
+
+    def import_bgg_view(
+        self,
+        request
+    ):
+        query = (
+            request.GET
+            .get(
+                'q',
+                ''
+            )
+            .strip()
+        )
+
+        results = []
+
+        if query:
+            result = request_bgg(
+                'search',
+                params={
+                    'query': query,
+                    'type': 'boardgame',
+                }
+            )
+
+            if not result.get(
+                'success'
+            ):
+                messages.error(
+                    request,
+                    result.get(
+                        'error',
+                        (
+                            'Erro ao pesquisar '
+                            'na BoardGameGeek.'
+                        )
+                    )
+                )
+
+            else:
+                try:
+                    results = parse_bgg_search(
+                        result['content']
+                    )
+
+                except Exception as error:
+                    messages.error(
+                        request,
+                        (
+                            'Não foi possível '
+                            'interpretar a resposta '
+                            'da BoardGameGeek.'
+                        )
+                    )
+
+                    print(
+                        'Erro BGG:',
+                        error
+                    )
+
+        if (
+            request.method
+            ==
+            'POST'
+        ):
+            bgg_id = (
+                request.POST
+                .get(
+                    'bgg_id'
+                )
+            )
+
+            if not bgg_id:
+                messages.error(
+                    request,
+                    'BGG ID não informado.'
+                )
+
+                return redirect(
+                    request.path
+                )
+
+            existing_game = (
+                BoardGameCatalog
+                .objects
+                .filter(
+                    bgg_id=bgg_id
+                )
+                .first()
+            )
+
+            if existing_game:
+                messages.warning(
+                    request,
+                    (
+                        f'{existing_game.name} '
+                        'já existe no catálogo.'
+                    )
+                )
+
+                return redirect(
+                    (
+                        f'../'
+                        f'{existing_game.id}/'
+                        f'change/'
+                    )
+                )
+
+            detail_result = request_bgg(
+                'thing',
+                params={
+                    'id': bgg_id,
+                    'stats': 1,
+                }
+            )
+
+            if not detail_result.get(
+                'success'
+            ):
+                messages.error(
+                    request,
+                    detail_result.get(
+                        'error',
+                        (
+                            'Erro ao buscar '
+                            'detalhes do jogo.'
+                        )
+                    )
+                )
+
+                return redirect(
+                    request.path
+                )
+
+            try:
+                game_data = (
+                    parse_bgg_game(
+                        detail_result[
+                            'content'
+                        ]
+                    )
+                )
+
+            except Exception as error:
+                messages.error(
+                    request,
+                    (
+                        'Não foi possível '
+                        'interpretar os detalhes '
+                        'do jogo.'
+                    )
+                )
+
+                print(
+                    'Erro BGG:',
+                    error
+                )
+
+                return redirect(
+                    request.path
+                )
+
+            if not game_data:
+                messages.error(
+                    request,
+                    (
+                        'Jogo não encontrado '
+                        'na BoardGameGeek.'
+                    )
+                )
+
+                return redirect(
+                    request.path
+                )
+
+            game = (
+                BoardGameCatalog
+                .objects
+                .create(
+                    **game_data
+                )
+            )
+
+            messages.success(
+                request,
+                (
+                    f'{game.name} foi '
+                    'importado com sucesso.'
+                )
+            )
+
+            return redirect(
+                (
+                    f'../'
+                    f'{game.id}/'
+                    f'change/'
+                )
+            )
+
+        context = {
+            **self.admin_site.each_context(
+                request
+            ),
+
+            'title':
+                (
+                    'Importar jogo '
+                    'da BoardGameGeek'
+                ),
+
+            'query':
+                query,
+
+            'results':
+                results,
+
+            'opts':
+                self.model._meta,
+        }
+
+        return render(
+            request,
+            'admin/boardgame_import_bgg.html',
+            context
+        )
+
+
+@admin.register(UserBoardGame)
+class UserBoardGameAdmin(admin.ModelAdmin):
+    list_display = (
+        'game',
+        'user',
+        'owned',
+        'played',
+        'rating',
+    )
+
+    list_filter = (
+        'owned',
+        'played',
+    )
+
+    search_fields = (
+        'game__name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'game',
+        'user',
+    )
+
+    ordering = (
+        'game__name',
     )
