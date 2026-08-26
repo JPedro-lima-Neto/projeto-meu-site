@@ -942,6 +942,301 @@ class UserBoardGame(models.Model):
         )
 
 
+class LibraryCatalog(models.Model):
+    ITEM_TYPE_CHOICES = [
+        (
+            'LIVRO',
+            'Livro'
+        ),
+        (
+            'HQ',
+            'HQ'
+        ),
+        (
+            'MANGA',
+            'Mangá'
+        ),
+        (
+            'REVISTA',
+            'Revista'
+        ),
+        (
+            'OUTRO',
+            'Outro'
+        ),
+    ]
+
+    openlibrary_key = models.CharField(
+        max_length=150,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    edition_key = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True
+    )
+
+    title = models.CharField(
+        max_length=300
+    )
+
+    subtitle = models.CharField(
+        max_length=300,
+        blank=True,
+        null=True
+    )
+
+    item_type = models.CharField(
+        max_length=20,
+        choices=ITEM_TYPE_CHOICES,
+        default='LIVRO'
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    authors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    publishers = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    first_publish_year = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    publication_year = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    isbn = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    cover_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    subjects = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    languages = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    page_count = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    imported_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'title'
+        ]
+
+        verbose_name = (
+            'Obra - catálogo da biblioteca'
+        )
+
+        verbose_name_plural = (
+            'Obras - catálogo da biblioteca'
+        )
+
+    def __str__(self):
+        if self.publication_year:
+            return (
+                f"{self.title} "
+                f"({self.publication_year})"
+            )
+
+        return self.title
+
+
+class UserLibraryEntry(models.Model):
+    READING_STATUS_CHOICES = [
+        (
+            'NAO_LIDO',
+            'Não lido'
+        ),
+        (
+            'LENDO',
+            'Lendo'
+        ),
+        (
+            'LIDO',
+            'Lido'
+        ),
+        (
+            'PAUSADO',
+            'Pausado'
+        ),
+        (
+            'QUERO_LER',
+            'Quero ler'
+        ),
+    ]
+
+    OWNERSHIP_TYPE_CHOICES = [
+        (
+            'FISICO',
+            'Físico'
+        ),
+        (
+            'DIGITAL',
+            'Digital'
+        ),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='library_entries'
+    )
+
+    item = models.ForeignKey(
+        LibraryCatalog,
+        on_delete=models.CASCADE,
+        related_name='user_entries'
+    )
+
+    owned = models.BooleanField(
+        default=False,
+        verbose_name='Tenho esta obra?'
+    )
+
+    ownership_type = models.CharField(
+        max_length=10,
+        choices=OWNERSHIP_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='Formato'
+    )
+
+    reading_status = models.CharField(
+        max_length=15,
+        choices=READING_STATUS_CHOICES,
+        default='NAO_LIDO',
+        verbose_name='Status de leitura'
+    )
+
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        blank=True,
+        null=True,
+        validators=[
+            MinValueValidator(
+                Decimal('0.0')
+            ),
+            MaxValueValidator(
+                Decimal('10.0')
+            ),
+            validate_half_step,
+        ],
+        verbose_name='Minha nota'
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name='Data de aquisição'
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='Observações'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'item'
+                ],
+                name='unique_user_library_entry'
+            )
+        ]
+
+        ordering = [
+            'item__title'
+        ]
+
+        verbose_name = (
+            'Obra da biblioteca do usuário'
+        )
+
+        verbose_name_plural = (
+            'Obras da biblioteca do usuário'
+        )
+
+    def clean(self):
+        super().clean()
+
+        if (
+            not self.owned
+            and self.ownership_type
+        ):
+            raise ValidationError(
+                (
+                    "O formato só pode ser informado "
+                    "quando a obra pertence à coleção."
+                )
+            )
+
+        if (
+            self.owned
+            and not self.ownership_type
+        ):
+            raise ValidationError(
+                (
+                    "Informe se a obra da coleção é "
+                    "física ou digital."
+                )
+            )
+
+    def __str__(self):
+        return (
+            f"{self.item.title} - "
+            f"{self.user.username} - "
+            f"{self.get_reading_status_display()}"
+        )
+
+
 class Follow(models.Model):
     follower = models.ForeignKey(
         User,

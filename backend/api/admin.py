@@ -20,6 +20,8 @@ from .models import (
     UserBoardGame,
     UserProfile,
     Achievement,
+    LibraryCatalog,
+    UserLibraryEntry,
 )
 
 from .views import (
@@ -260,10 +262,6 @@ class ConsoleAdmin(admin.ModelAdmin):
     )
 
 
-# =========================================================
-# BOARD GAMES - MODELO ANTIGO
-# =========================================================
-
 @admin.register(BoardGame)
 class BoardGameAdmin(admin.ModelAdmin):
     list_display = (
@@ -279,10 +277,6 @@ class BoardGameAdmin(admin.ModelAdmin):
         'user__username',
     )
 
-
-# =========================================================
-# BOARD GAMES - CATÁLOGO / BOARDGAMEGEEK
-# =========================================================
 
 @admin.register(BoardGameCatalog)
 class BoardGameCatalogAdmin(admin.ModelAdmin):
@@ -648,10 +642,6 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
         )
 
 
-# =========================================================
-# BOARD GAMES - COLEÇÃO DO USUÁRIO
-# =========================================================
-
 @admin.register(UserBoardGame)
 class UserBoardGameAdmin(admin.ModelAdmin):
     list_display = (
@@ -679,4 +669,136 @@ class UserBoardGameAdmin(admin.ModelAdmin):
 
     ordering = (
         'game__name',
+    )
+
+
+@admin.register(LibraryCatalog)
+class LibraryCatalogAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'item_type',
+        'publication_year',
+        'display_publishers',
+        'display_isbn',
+    )
+
+    list_filter = (
+        'item_type',
+        'publication_year',
+    )
+
+    search_fields = (
+        'title',
+        'subtitle',
+        'authors',
+        'publishers',
+        'isbn',
+        'openlibrary_key',
+        'edition_key',
+    )
+
+    ordering = (
+        'title',
+    )
+
+    readonly_fields = (
+        'openlibrary_key',
+        'edition_key',
+        'title',
+        'subtitle',
+        'item_type',
+        'description',
+        'authors',
+        'publishers',
+        'first_publish_year',
+        'publication_year',
+        'isbn',
+        'cover_url',
+        'subjects',
+        'languages',
+        'page_count',
+        'imported_at',
+        'updated_at',
+    )
+
+    def display_publishers(
+        self,
+        obj
+    ):
+        if not obj.publishers:
+            return '-'
+
+        if isinstance(
+            obj.publishers,
+            list
+        ):
+            return ', '.join(
+                str(value)
+                for value
+                in obj.publishers[:3]
+            )
+
+        return str(
+            obj.publishers
+        )
+
+    display_publishers.short_description = (
+        'Editoras'
+    )
+
+    def display_isbn(
+        self,
+        obj
+    ):
+        if not obj.isbn:
+            return '-'
+
+        if isinstance(
+            obj.isbn,
+            list
+        ):
+            return ', '.join(
+                str(value)
+                for value
+                in obj.isbn[:2]
+            )
+
+        return str(
+            obj.isbn
+        )
+
+    display_isbn.short_description = (
+        'ISBN'
+    )
+
+
+@admin.register(UserLibraryEntry)
+class UserLibraryEntryAdmin(admin.ModelAdmin):
+    list_display = (
+        'item',
+        'user',
+        'owned',
+        'ownership_type',
+        'reading_status',
+        'rating',
+    )
+
+    list_filter = (
+        'owned',
+        'ownership_type',
+        'reading_status',
+    )
+
+    search_fields = (
+        'item__title',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'item',
+        'user',
+    )
+
+    ordering = (
+        'item__title',
     )

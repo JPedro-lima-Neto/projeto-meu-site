@@ -19,6 +19,8 @@ from .models import (
     Follow,
     Like,
     Comment,
+    LibraryCatalog,
+    UserLibraryEntry,
 )
 
 
@@ -917,6 +919,190 @@ class UserPokemonSerializer(
             self.context[
                 'request'
             ].user
+        )
+
+        return super().create(
+            validated_data
+        )
+
+class LibraryCatalogSerializer(
+    serializers.ModelSerializer
+):
+    item_type_display = serializers.CharField(
+        source='get_item_type_display',
+        read_only=True
+    )
+
+    class Meta:
+        model = LibraryCatalog
+
+        fields = [
+            'id',
+            'openlibrary_key',
+            'edition_key',
+            'title',
+            'subtitle',
+            'item_type',
+            'item_type_display',
+            'description',
+            'authors',
+            'publishers',
+            'first_publish_year',
+            'publication_year',
+            'isbn',
+            'cover_url',
+            'subjects',
+            'languages',
+            'page_count',
+            'imported_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'imported_at',
+            'updated_at',
+        ]
+
+
+class UserLibraryEntrySerializer(
+    serializers.ModelSerializer
+):
+    item = LibraryCatalogSerializer(
+        read_only=True
+    )
+
+    item_id = serializers.PrimaryKeyRelatedField(
+        source='item',
+        queryset=LibraryCatalog.objects.all(),
+        write_only=True,
+        required=False
+    )
+
+    username = serializers.CharField(
+        source='user.username',
+        read_only=True
+    )
+
+    reading_status_display = serializers.CharField(
+        source='get_reading_status_display',
+        read_only=True
+    )
+
+    ownership_type_display = serializers.CharField(
+        source='get_ownership_type_display',
+        read_only=True
+    )
+
+    class Meta:
+        model = UserLibraryEntry
+
+        fields = [
+            'id',
+            'user',
+            'username',
+            'item',
+            'item_id',
+            'owned',
+            'ownership_type',
+            'ownership_type_display',
+            'reading_status',
+            'reading_status_display',
+            'rating',
+            'acquired_at',
+            'notes',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'user',
+            'username',
+            'item',
+            'ownership_type_display',
+            'reading_status_display',
+            'created_at',
+            'updated_at',
+        ]
+
+    def validate_rating(
+        self,
+        value
+    ):
+        if value is None:
+            return value
+
+        value = Decimal(
+            str(value)
+        )
+
+        if value < Decimal('0.0'):
+            raise serializers.ValidationError(
+                'A nota não pode ser menor que 0.'
+            )
+
+        if value > Decimal('10.0'):
+            raise serializers.ValidationError(
+                'A nota não pode ser maior que 10.'
+            )
+
+        if value % Decimal('0.5') != 0:
+            raise serializers.ValidationError(
+                'A nota deve variar de 0,5 em 0,5.'
+            )
+
+        return value
+
+    def validate(
+        self,
+        attrs
+    ):
+        owned = attrs.get(
+            'owned',
+            getattr(
+                self.instance,
+                'owned',
+                False
+            )
+        )
+
+        ownership_type = attrs.get(
+            'ownership_type',
+            getattr(
+                self.instance,
+                'ownership_type',
+                None
+            )
+        )
+
+        if owned and not ownership_type:
+            raise serializers.ValidationError(
+                {
+                    'ownership_type': (
+                        'Informe se a obra é física ou digital.'
+                    )
+                }
+            )
+
+        if not owned and ownership_type:
+            raise serializers.ValidationError(
+                {
+                    'ownership_type': (
+                        'O formato só pode ser informado quando '
+                        'a obra pertence à coleção.'
+                    )
+                }
+            )
+
+        return attrs
+
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data['user'] = (
+            self.context['request'].user
         )
 
         return super().create(

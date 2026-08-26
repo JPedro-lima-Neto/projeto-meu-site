@@ -21,6 +21,8 @@ from .views import (
     UserBoardGameViewSet,
     UserProfileViewSet,
     AchievementViewSet,
+    LibraryCatalogViewSet,
+    UserLibraryEntryViewSet,
     CustomAuthToken,
 )
 
@@ -67,21 +69,11 @@ router.register(
     basename='consoles'
 )
 
-
-# =========================================================
-# BOARD GAMES - MODELO ANTIGO
-# =========================================================
-
 router.register(
     r'boardgames',
     BoardGameViewSet,
     basename='boardgames'
 )
-
-
-# =========================================================
-# BOARD GAMES - NOVO CATÁLOGO / BGG
-# =========================================================
 
 router.register(
     r'boardgame-catalog',
@@ -89,21 +81,11 @@ router.register(
     basename='boardgame-catalog'
 )
 
-
-# =========================================================
-# BOARD GAMES - COLEÇÃO DO USUÁRIO
-# =========================================================
-
 router.register(
     r'user-boardgames',
     UserBoardGameViewSet,
     basename='user-boardgames'
 )
-
-
-# =========================================================
-# POKÉMON
-# =========================================================
 
 router.register(
     r'pokedex',
@@ -120,6 +102,18 @@ router.register(
     r'hall-of-fame',
     PokemonHallOfFameViewSet,
     basename='hall-of-fame'
+)
+
+router.register(
+    r'library-catalog',
+    LibraryCatalogViewSet,
+    basename='library-catalog'
+)
+
+router.register(
+    r'reading-library',
+    UserLibraryEntryViewSet,
+    basename='reading-library'
 )
 
 

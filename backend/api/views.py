@@ -54,6 +54,8 @@ from .models import (
     Follow,
     Like,
     Comment,
+    LibraryCatalog,
+    UserLibraryEntry,
 )
 
 from .serializers import (
@@ -73,6 +75,8 @@ from .serializers import (
     FollowSerializer,
     LikeSerializer,
     CommentSerializer,
+    LibraryCatalogSerializer,
+    UserLibraryEntrySerializer,
 )
 
 
@@ -2961,5 +2965,514 @@ class UserBoardGameViewSet(
             raise PermissionDenied(
                 'Não autorizado.'
             )
+
+        instance.delete()
+
+OPEN_LIBRARY_SEARCH_URL = 'https://openlibrary.org/search.json'
+OPEN_LIBRARY_BASE_URL = 'https://openlibrary.org'
+OPEN_LIBRARY_COVERS_URL = 'https://covers.openlibrary.org/b'
+
+
+def _open_library_cover_url(cover_id, size='L'):
+    if not cover_id:
+        return None
+
+    return f'{OPEN_LIBRARY_COVERS_URL}/id/{cover_id}-{size}.jpg'
+
+
+def _normalize_open_library_description(value):
+    if isinstance(value, dict):
+        return value.get('value') or ''
+
+    if isinstance(value, str):
+        return value
+
+    return ''
+
+
+def _normalize_open_library_item_type(subjects):
+    normalized = ' '.join(
+        str(subject).lower()
+        for subject in (subjects or [])
+    )
+
+    if any(
+        term in normalized
+        for term in [
+            'comic',
+            'comics',
+            'graphic novel',
+            'graphic novels',
+        ]
+    ):
+        return 'HQ'
+
+    if any(
+        term in normalized
+        for term in [
+            'manga',
+            'mangas',
+            'japanese comics',
+        ]
+    ):
+        return 'MANGA'
+
+    return 'LIVRO'
+
+
+def _normalize_open_library_search_doc(doc):
+    cover_id = doc.get('cover_i')
+    edition_keys = doc.get('edition_key') or []
+    isbn_values = doc.get('isbn') or []
+    languages = doc.get('language') or []
+    subjects = doc.get('subject') or []
+    publishers = doc.get('publisher') or []
+
+    return {
+        'openlibrary_key': doc.get('key'),
+        'edition_key': edition_keys[0] if edition_keys else None,
+        'title': doc.get('title') or '',
+        'subtitle': doc.get('subtitle'),
+        'authors': doc.get('author_name') or [],
+        'publishers': publishers[:20],
+        'first_publish_year': doc.get('first_publish_year'),
+        'publication_year': (
+            (doc.get('publish_year') or [None])[0]
+        ),
+        'isbn': isbn_values[:20],
+        'cover_url': _open_library_cover_url(cover_id),
+        'subjects': subjects[:40],
+        'languages': languages[:20],
+        'page_count': (
+            doc.get('number_of_pages_median')
+            or doc.get('number_of_pages')
+        ),
+        'item_type': _normalize_open_library_item_type(subjects),
+    }
+
+
+def _request_open_library_search(query, limit=20):
+    try:
+        response = requests.get(
+            OPEN_LIBRARY_SEARCH_URL,
+            params={
+                'q': query,
+                'limit': limit,
+                'fields': ','.join([
+                    'key',
+                    'title',
+                    'subtitle',
+                    'author_name',
+                    'publisher',
+                    'first_publish_year',
+                    'publish_year',
+                    'isbn',
+                    'cover_i',
+                    'subject',
+                    'language',
+                    'edition_key',
+                    'number_of_pages_median',
+                ]),
+            },
+            timeout=20,
+        )
+    except requests.RequestException as error:
+        return {
+            'success': False,
+            'status': 503,
+            'error': 'Não foi possível conectar à Open Library.',
+            'details': str(error),
+        }
+
+    if not response.ok:
+        return {
+            'success': False,
+            'status': response.status_code,
+            'error': 'Erro ao consultar a Open Library.',
+            'details': response.text,
+        }
+
+    try:
+        data = response.json()
+    except ValueError:
+        return {
+            'success': False,
+            'status': 502,
+            'error': 'A Open Library retornou uma resposta inválida.',
+        }
+
+    return {
+        'success': True,
+        'items': [
+            _normalize_open_library_search_doc(doc)
+            for doc in data.get('docs', [])
+        ],
+    }
+
+
+def _request_open_library_json(path):
+    if not path:
+        return None
+
+    if not path.startswith('/'):
+        path = f'/{path}'
+
+    try:
+        response = requests.get(
+            f'{OPEN_LIBRARY_BASE_URL}{path}.json',
+            timeout=20,
+        )
+    except requests.RequestException:
+        return None
+
+    if not response.ok:
+        return None
+
+    try:
+        return response.json()
+    except ValueError:
+        return None
+
+
+def _get_open_library_item_detail(openlibrary_key, edition_key=None):
+    work_data = _request_open_library_json(openlibrary_key) or {}
+    edition_data = {}
+
+    if edition_key:
+        edition_data = (
+            _request_open_library_json(
+                f'/books/{edition_key}'
+            )
+            or {}
+        )
+
+    title = (
+        edition_data.get('title')
+        or work_data.get('title')
+        or ''
+    )
+
+    subtitle = (
+        edition_data.get('subtitle')
+        or work_data.get('subtitle')
+    )
+
+    description = _normalize_open_library_description(
+        work_data.get('description')
+        or edition_data.get('description')
+    )
+
+    subjects = work_data.get('subjects') or []
+    publishers = edition_data.get('publishers') or []
+    languages = []
+
+    for language in edition_data.get('languages') or []:
+        if isinstance(language, dict):
+            key = language.get('key') or ''
+            languages.append(key.rsplit('/', 1)[-1])
+
+    authors = []
+
+    for author_ref in work_data.get('authors') or []:
+        author = author_ref.get('author') or {}
+        author_key = author.get('key')
+
+        if not author_key:
+            continue
+
+        author_data = _request_open_library_json(author_key) or {}
+        author_name = author_data.get('name')
+
+        if author_name:
+            authors.append(author_name)
+
+    covers = (
+        edition_data.get('covers')
+        or work_data.get('covers')
+        or []
+    )
+
+    cover_url = (
+        _open_library_cover_url(covers[0])
+        if covers
+        else None
+    )
+
+    isbn = []
+
+    for field in ['isbn_13', 'isbn_10']:
+        for value in edition_data.get(field) or []:
+            if value not in isbn:
+                isbn.append(value)
+
+    publication_year = None
+    publish_date = edition_data.get('publish_date')
+
+    if publish_date:
+        match = re.search(r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b', str(publish_date))
+
+        if match:
+            publication_year = safe_int(match.group(1))
+
+    first_publish_year = None
+    first_publish_date = work_data.get('first_publish_date')
+
+    if first_publish_date:
+        match = re.search(r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b', str(first_publish_date))
+
+        if match:
+            first_publish_year = safe_int(match.group(1))
+
+    page_count = (
+        edition_data.get('number_of_pages')
+        or edition_data.get('pagination')
+    )
+
+    if not isinstance(page_count, int):
+        page_count = safe_int(page_count)
+
+    return {
+        'openlibrary_key': openlibrary_key,
+        'edition_key': edition_key,
+        'title': title,
+        'subtitle': subtitle,
+        'item_type': _normalize_open_library_item_type(subjects),
+        'description': description,
+        'authors': authors,
+        'publishers': publishers,
+        'first_publish_year': first_publish_year,
+        'publication_year': publication_year,
+        'isbn': isbn,
+        'cover_url': cover_url,
+        'subjects': subjects[:40],
+        'languages': languages,
+        'page_count': page_count,
+    }
+
+
+class LibraryCatalogViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    queryset = (
+        LibraryCatalog.objects
+        .all()
+        .order_by('title')
+    )
+
+    serializer_class = LibraryCatalogSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='search-open-library'
+    )
+    def search_open_library(self, request):
+        query = request.query_params.get('q', '').strip()
+
+        if not query:
+            return Response(
+                {
+                    'error': 'Informe um título, autor ou ISBN para pesquisar.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = _request_open_library_search(query)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        return Response(result.get('items', []))
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+        url_path='import-open-library'
+    )
+    def import_open_library(self, request):
+        openlibrary_key = request.data.get('openlibrary_key')
+        edition_key = request.data.get('edition_key')
+
+        if not openlibrary_key:
+            return Response(
+                {'error': 'openlibrary_key é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        detail = _get_open_library_item_detail(
+            openlibrary_key,
+            edition_key
+        )
+
+        if not detail.get('title'):
+            return Response(
+                {'error': 'Obra não encontrada na Open Library.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        item_type = request.data.get('item_type')
+
+        if item_type:
+            detail['item_type'] = item_type
+
+        catalog_item, created = (
+            LibraryCatalog.objects.update_or_create(
+                openlibrary_key=openlibrary_key,
+                edition_key=edition_key,
+                defaults=detail
+            )
+        )
+
+        entry = (
+            UserLibraryEntry.objects
+            .filter(
+                user=request.user,
+                item=catalog_item
+            )
+            .first()
+        )
+
+        entry_data = {
+            'item_id': catalog_item.id,
+            'owned': request.data.get('owned', False),
+            'ownership_type': request.data.get('ownership_type'),
+            'reading_status': request.data.get('reading_status'),
+            'rating': request.data.get('rating'),
+            'acquired_at': request.data.get('acquired_at'),
+            'notes': request.data.get('notes'),
+        }
+
+        entry_data = {
+            key: value
+            for key, value in entry_data.items()
+            if value is not None
+        }
+
+        serializer_context = {
+            'request': request
+        }
+
+        if entry:
+            serializer = UserLibraryEntrySerializer(
+                entry,
+                data=entry_data,
+                partial=True,
+                context=serializer_context
+            )
+        else:
+            serializer = UserLibraryEntrySerializer(
+                data=entry_data,
+                context=serializer_context
+            )
+
+        serializer.is_valid(raise_exception=True)
+        saved_entry = serializer.save()
+
+        return Response(
+            {
+                'message': f'{catalog_item.title} salvo com sucesso.',
+                'catalog_item': LibraryCatalogSerializer(
+                    catalog_item,
+                    context=serializer_context
+                ).data,
+                'entry': UserLibraryEntrySerializer(
+                    saved_entry,
+                    context=serializer_context
+                ).data,
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if created
+                else status.HTTP_200_OK
+            )
+        )
+
+
+class UserLibraryEntryViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = UserLibraryEntrySerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    def get_queryset(self):
+        queryset = (
+            UserLibraryEntry.objects
+            .select_related(
+                'user',
+                'item'
+            )
+        )
+
+        target_username = self.request.query_params.get('username')
+        owned = self.request.query_params.get('owned')
+        ownership_type = self.request.query_params.get('ownership_type')
+        reading_status = self.request.query_params.get('reading_status')
+        item_type = self.request.query_params.get('item_type')
+
+        if target_username:
+            queryset = queryset.filter(
+                user__username=target_username
+            )
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
+            )
+        else:
+            return UserLibraryEntry.objects.none()
+
+        if owned is not None:
+            owned_value = str(owned).lower() in [
+                '1',
+                'true',
+                'yes',
+                'sim',
+            ]
+
+            queryset = queryset.filter(
+                owned=owned_value
+            )
+
+        if ownership_type:
+            queryset = queryset.filter(
+                ownership_type__iexact=ownership_type
+            )
+
+        if reading_status:
+            queryset = queryset.filter(
+                reading_status__iexact=reading_status
+            )
+
+        if item_type:
+            queryset = queryset.filter(
+                item__item_type__iexact=item_type
+            )
+
+        return queryset.order_by(
+            'item__title'
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied('Não autorizado.')
 
         instance.delete()
