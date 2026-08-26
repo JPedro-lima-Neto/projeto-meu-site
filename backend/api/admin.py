@@ -56,10 +56,29 @@ class AchievementAdmin(admin.ModelAdmin):
 class PlatformAdmin(admin.ModelAdmin):
     list_display = (
         'name',
+        'abbreviation',
+        'igdb_id',
+        'generation',
     )
 
     search_fields = (
         'name',
+        'abbreviation',
+        'slug',
+        'igdb_id',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    readonly_fields = (
+        'igdb_id',
+        'name',
+        'abbreviation',
+        'slug',
+        'generation',
+        'logo_url',
     )
 
 
@@ -67,19 +86,45 @@ class PlatformAdmin(admin.ModelAdmin):
 class GameCatalogAdmin(admin.ModelAdmin):
     list_display = (
         'title',
-        'platform',
+        'igdb_id',
         'release_year',
-        'genre',
+        'igdb_rating',
+        'aggregated_rating',
     )
 
     list_filter = (
-        'platform',
         'release_year',
+        'platforms',
     )
 
     search_fields = (
         'title',
-        'genre',
+        'igdb_id',
+        'genres',
+        'developers',
+        'publishers',
+    )
+
+    filter_horizontal = (
+        'platforms',
+    )
+
+    ordering = (
+        'title',
+    )
+
+    readonly_fields = (
+        'igdb_id',
+        'title',
+        'description',
+        'storyline',
+        'cover_url',
+        'release_year',
+        'genres',
+        'developers',
+        'publishers',
+        'igdb_rating',
+        'aggregated_rating',
     )
 
 
@@ -100,6 +145,15 @@ class UserGameEntryAdmin(admin.ModelAdmin):
     search_fields = (
         'user__username',
         'game_catalog__title',
+    )
+
+    autocomplete_fields = (
+        'user',
+        'game_catalog',
+    )
+
+    ordering = (
+        '-created_at',
     )
 
 
@@ -181,15 +235,34 @@ class PokemonHallOfFameAdmin(admin.ModelAdmin):
 @admin.register(Console)
 class ConsoleAdmin(admin.ModelAdmin):
     list_display = (
-        'name',
+        'platform',
         'user',
+        'created_at',
+    )
+
+    list_filter = (
+        'platform',
     )
 
     search_fields = (
-        'name',
+        'platform__name',
+        'platform__abbreviation',
         'user__username',
     )
 
+    autocomplete_fields = (
+        'platform',
+        'user',
+    )
+
+    ordering = (
+        'platform__name',
+    )
+
+
+# =========================================================
+# BOARD GAMES - MODELO ANTIGO
+# =========================================================
 
 @admin.register(BoardGame)
 class BoardGameAdmin(admin.ModelAdmin):
@@ -206,6 +279,10 @@ class BoardGameAdmin(admin.ModelAdmin):
         'user__username',
     )
 
+
+# =========================================================
+# BOARD GAMES - CATÁLOGO / BOARDGAMEGEEK
+# =========================================================
 
 @admin.register(BoardGameCatalog)
 class BoardGameCatalogAdmin(admin.ModelAdmin):
@@ -238,7 +315,6 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
         'bgg_id',
         'name',
         'original_name',
-        'description',
         'cover_url',
         'thumbnail_url',
         'year',
@@ -261,16 +337,22 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
-            'Informações importadas',
+            'Informações principais',
             {
                 'fields': (
-                    'bgg_id',
                     'name',
                     'original_name',
                     'description',
                     'cover_image',
                     'cover_url',
                     'thumbnail_url',
+                )
+            }
+        ),
+        (
+            'Informações do jogo',
+            {
+                'fields': (
                     'year',
                     'min_players',
                     'max_players',
@@ -279,13 +361,35 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
                     'min_age',
                     'publisher',
                     'publishers',
+                )
+            }
+        ),
+        (
+            'Detalhes',
+            {
+                'fields': (
                     'categories',
                     'mechanics',
                     'designers',
                     'artists',
                     'bgg_rating',
                     'bgg_weight',
+                )
+            }
+        ),
+        (
+            'Conteúdo editável',
+            {
+                'fields': (
                     'rules',
+                )
+            }
+        ),
+        (
+            'BoardGameGeek',
+            {
+                'fields': (
+                    'bgg_id',
                 )
             }
         ),
@@ -359,8 +463,10 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
 
             else:
                 try:
-                    results = parse_bgg_search(
-                        result['content']
+                    results = (
+                        parse_bgg_search(
+                            result['content']
+                        )
                     )
 
                 except Exception as error:
@@ -378,11 +484,7 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
                         error
                     )
 
-        if (
-            request.method
-            ==
-            'POST'
-        ):
+        if request.method == 'POST':
             bgg_id = (
                 request.POST
                 .get(
@@ -414,7 +516,9 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
                     request,
                     (
                         f'{existing_game.name} '
-                        'já existe no catálogo.'
+                        'já existe no catálogo. '
+                        'Os dados existentes '
+                        'foram mantidos.'
                     )
                 )
 
@@ -505,7 +609,10 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
                 request,
                 (
                     f'{game.name} foi '
-                    'importado com sucesso.'
+                    'importado com sucesso. '
+                    'Você pode editar a '
+                    'descrição em português '
+                    'antes de salvar.'
                 )
             )
 
@@ -522,20 +629,16 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
                 request
             ),
 
-            'title':
-                (
-                    'Importar jogo '
-                    'da BoardGameGeek'
-                ),
+            'title': (
+                'Importar jogo '
+                'da BoardGameGeek'
+            ),
 
-            'query':
-                query,
+            'query': query,
 
-            'results':
-                results,
+            'results': results,
 
-            'opts':
-                self.model._meta,
+            'opts': self.model._meta,
         }
 
         return render(
@@ -544,6 +647,10 @@ class BoardGameCatalogAdmin(admin.ModelAdmin):
             context
         )
 
+
+# =========================================================
+# BOARD GAMES - COLEÇÃO DO USUÁRIO
+# =========================================================
 
 @admin.register(UserBoardGame)
 class UserBoardGameAdmin(admin.ModelAdmin):

@@ -22,86 +22,222 @@ def validate_half_step(value):
     if value is None:
         return
 
-    decimal_value = Decimal(str(value))
+    decimal_value = Decimal(
+        str(value)
+    )
 
-    if decimal_value % Decimal("0.5") != 0:
+    if (
+        decimal_value
+        % Decimal("0.5")
+        != 0
+    ):
         raise ValidationError(
             "A nota deve variar de 0,5 em 0,5."
         )
 
 
 class Platform(models.Model):
-    name = models.CharField(
-        max_length=100,
-        unique=True
-    )
-
-    platform_image = models.ImageField(
-        upload_to='platforms/',
+    igdb_id = models.PositiveIntegerField(
+        unique=True,
         blank=True,
         null=True
     )
+
+    name = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    abbreviation = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    slug = models.SlugField(
+        max_length=180,
+        blank=True,
+        null=True
+    )
+
+    generation = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    logo_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
 
     def __str__(self):
         return self.name
 
 
 class GameCatalog(models.Model):
-    title = models.CharField(
-        max_length=200
-    )
-
-    api_id = models.CharField(
-        max_length=100,
+    igdb_id = models.PositiveIntegerField(
+        unique=True,
         blank=True,
-        null=True,
-        unique=True
+        null=True
     )
 
-    platform = models.ForeignKey(
-        Platform,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+    title = models.CharField(
+        max_length=250
     )
 
-    cover_image = models.ImageField(
-        upload_to='games_cover/',
+    slug = models.SlugField(
+        max_length=300,
+        blank=True,
+        null=True
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    storyline = models.TextField(
         blank=True,
         null=True
     )
 
     cover_url = models.URLField(
+        max_length=1000,
         blank=True,
         null=True
     )
 
-    genre = models.CharField(
-        max_length=100,
+    release_year = models.PositiveIntegerField(
         blank=True,
         null=True
     )
 
-    release_year = models.IntegerField(
+    genres = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    developers = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    publishers = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    platforms = models.ManyToManyField(
+        Platform,
+        related_name='games',
+        blank=True
+    )
+
+    igdb_rating = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
         blank=True,
         null=True
     )
 
-    created_by = models.ForeignKey(
+    aggregated_rating = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    imported_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'title'
+        ]
+
+        verbose_name = (
+            'Jogo - catálogo IGDB'
+        )
+
+        verbose_name_plural = (
+            'Jogos - catálogo IGDB'
+        )
+
+    def __str__(self):
+        if self.release_year:
+            return (
+                f"{self.title} "
+                f"({self.release_year})"
+            )
+
+        return self.title
+
+
+class Console(models.Model):
+    user = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='catalog_contributions'
+        on_delete=models.CASCADE,
+        related_name='owned_consoles'
     )
+
+    platform = models.ForeignKey(
+        Platform,
+        on_delete=models.PROTECT,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'platform'
+                ],
+                name='unique_user_console'
+            )
+        ]
+
+        ordering = [
+            'platform__name'
+        ]
 
     def __str__(self):
         if self.platform:
             return (
-                f"{self.title} "
-                f"({self.platform.name})"
+                f"{self.platform.name} "
+                f"({self.user.username})"
             )
 
-        return self.title
+        return (
+            f"Console sem plataforma "
+            f"({self.user.username})"
+        )
 
 
 class Pokemon(models.Model):
@@ -221,12 +357,30 @@ class UserPokemon(models.Model):
 
 class UserGameEntry(models.Model):
     STATUS_CHOICES = [
-        ('ZEREI', 'Zerei'),
-        ('JOGUEI', 'Joguei'),
-        ('JOGANDO', 'Jogando'),
-        ('PAUSADO', 'Pausado'),
-        ('QUERO', 'Quero Jogar'),
-        ('PLATINEI', 'Platinei'),
+        (
+            'ZEREI',
+            'Zerei'
+        ),
+        (
+            'JOGUEI',
+            'Joguei'
+        ),
+        (
+            'JOGANDO',
+            'Jogando'
+        ),
+        (
+            'PAUSADO',
+            'Pausado'
+        ),
+        (
+            'QUERO',
+            'Quero Jogar'
+        ),
+        (
+            'PLATINEI',
+            'Platinei'
+        ),
     ]
 
     user = models.ForeignKey(
@@ -251,7 +405,16 @@ class UserGameEntry(models.Model):
         max_digits=3,
         decimal_places=1,
         blank=True,
-        null=True
+        null=True,
+        validators=[
+            MinValueValidator(
+                Decimal('0.0')
+            ),
+            MaxValueValidator(
+                Decimal('10.0')
+            ),
+            validate_half_step,
+        ]
     )
 
     play_time = models.CharField(
@@ -276,23 +439,39 @@ class UserGameEntry(models.Model):
         auto_now_add=True
     )
 
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
     class Meta:
-        unique_together = (
-            'user',
-            'game_catalog'
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'game_catalog'
+                ],
+                name='unique_user_game_entry'
+            )
+        ]
 
     def __str__(self):
         return (
             f"{self.user.username} "
-            f"jogou {self.game_catalog.title}"
+            f"- {self.game_catalog.title} "
+            f"- {self.get_status_display()}"
         )
 
 
 class UserOwnedGame(models.Model):
     OWNERSHIP_TYPE_CHOICES = [
-        ('FISICO', 'Físico'),
-        ('DIGITAL', 'Digital'),
+        (
+            'FISICO',
+            'Físico'
+        ),
+        (
+            'DIGITAL',
+            'Digital'
+        ),
     ]
 
     user = models.ForeignKey(
@@ -334,6 +513,10 @@ class UserOwnedGame(models.Model):
         auto_now_add=True
     )
 
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -347,7 +530,10 @@ class UserOwnedGame(models.Model):
             )
         ]
 
-        verbose_name = 'Jogo da coleção'
+        verbose_name = (
+            'Jogo da coleção'
+        )
+
         verbose_name_plural = (
             'Jogos da coleção'
         )
@@ -359,40 +545,6 @@ class UserOwnedGame(models.Model):
             f"{self.get_ownership_type_display()}"
         )
 
-
-class Console(models.Model):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE
-    )
-
-    name = models.CharField(
-        max_length=100
-    )
-
-    photo = models.ImageField(
-        upload_to='consoles/',
-        blank=True,
-        null=True
-    )
-
-    def __str__(self):
-        return (
-            f"{self.name} "
-            f"({self.user.username})"
-        )
-
-
-# =========================================================
-# BOARD GAMES - SISTEMA ANTIGO
-# =========================================================
-#
-# Vamos manter temporariamente para não quebrar
-# o endpoint e os dados que já existem.
-#
-# Depois que BoardGameCatalog + UserBoardGame estiverem
-# funcionando, podemos migrar os dados e remover este model.
-# =========================================================
 
 class BoardGame(models.Model):
     user = models.ForeignKey(
@@ -458,10 +610,6 @@ class BoardGame(models.Model):
             f"({self.user.username})"
         )
 
-
-# =========================================================
-# BOARD GAMES - NOVO CATÁLOGO
-# =========================================================
 
 class BoardGameCatalog(models.Model):
     bgg_id = models.PositiveIntegerField(
@@ -677,10 +825,6 @@ class BoardGameCatalog(models.Model):
         return self.name
 
 
-# =========================================================
-# BOARD GAMES - COLEÇÃO DO USUÁRIO
-# =========================================================
-
 class UserBoardGame(models.Model):
     user = models.ForeignKey(
         User,
@@ -748,9 +892,7 @@ class UserBoardGame(models.Model):
                     'user',
                     'game'
                 ],
-                name=(
-                    'unique_user_board_game'
-                )
+                name='unique_user_board_game'
             )
         ]
 
@@ -781,22 +923,22 @@ class UserBoardGame(models.Model):
             )
 
     def __str__(self):
-        status = []
+        statuses = []
 
         if self.owned:
-            status.append(
+            statuses.append(
                 'Tenho'
             )
 
         if self.played:
-            status.append(
+            statuses.append(
                 'Joguei'
             )
 
         return (
             f"{self.game.name} - "
             f"{self.user.username} - "
-            f"{' / '.join(status)}"
+            f"{' / '.join(statuses)}"
         )
 
 

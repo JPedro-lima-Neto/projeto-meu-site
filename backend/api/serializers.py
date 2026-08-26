@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 from rest_framework import serializers
-from django.contrib.auth.models import User
 
 from .models import (
     Platform,
@@ -23,31 +22,88 @@ from .models import (
 )
 
 
-class PlatformSerializer(serializers.ModelSerializer):
+class PlatformSerializer(
+    serializers.ModelSerializer
+):
     class Meta:
         model = Platform
+
         fields = [
             'id',
+            'igdb_id',
             'name',
-            'platform_image',
+            'abbreviation',
+            'slug',
+            'generation',
+            'logo_url',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'igdb_id',
+            'name',
+            'abbreviation',
+            'slug',
+            'generation',
+            'logo_url',
+            'updated_at',
         ]
 
 
-class GameCatalogSerializer(serializers.ModelSerializer):
-    platform = PlatformSerializer(
+class GameCatalogSerializer(
+    serializers.ModelSerializer
+):
+    platforms = PlatformSerializer(
+        many=True,
         read_only=True
     )
 
     class Meta:
         model = GameCatalog
-        fields = '__all__'
+
+        fields = [
+            'id',
+            'igdb_id',
+            'title',
+            'slug',
+            'description',
+            'storyline',
+            'cover_url',
+            'release_year',
+            'genres',
+            'developers',
+            'publishers',
+            'platforms',
+            'igdb_rating',
+            'aggregated_rating',
+            'imported_at',
+            'updated_at',
+        ]
 
         read_only_fields = [
-            'created_by',
+            'id',
+            'igdb_id',
+            'title',
+            'slug',
+            'description',
+            'storyline',
+            'cover_url',
+            'release_year',
+            'genres',
+            'developers',
+            'publishers',
+            'platforms',
+            'igdb_rating',
+            'aggregated_rating',
+            'imported_at',
+            'updated_at',
         ]
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class UserProfileSerializer(
+    serializers.ModelSerializer
+):
     username = serializers.CharField(
         source='user.username',
         read_only=True
@@ -67,7 +123,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
 
 
-class AchievementSerializer(serializers.ModelSerializer):
+class AchievementSerializer(
+    serializers.ModelSerializer
+):
     class Meta:
         model = Achievement
 
@@ -83,13 +141,19 @@ class AchievementSerializer(serializers.ModelSerializer):
         ]
 
 
-class FollowSerializer(serializers.ModelSerializer):
-    follower_username = serializers.ReadOnlyField(
-        source='follower.username'
+class FollowSerializer(
+    serializers.ModelSerializer
+):
+    follower_username = (
+        serializers.ReadOnlyField(
+            source='follower.username'
+        )
     )
 
-    followed_username = serializers.ReadOnlyField(
-        source='followed.username'
+    followed_username = (
+        serializers.ReadOnlyField(
+            source='followed.username'
+        )
     )
 
     class Meta:
@@ -109,9 +173,13 @@ class FollowSerializer(serializers.ModelSerializer):
         ]
 
 
-class LikeSerializer(serializers.ModelSerializer):
-    username = serializers.ReadOnlyField(
-        source='user.username'
+class LikeSerializer(
+    serializers.ModelSerializer
+):
+    username = (
+        serializers.ReadOnlyField(
+            source='user.username'
+        )
     )
 
     class Meta:
@@ -130,9 +198,13 @@ class LikeSerializer(serializers.ModelSerializer):
         ]
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    username = serializers.ReadOnlyField(
-        source='user.username'
+class CommentSerializer(
+    serializers.ModelSerializer
+):
+    username = (
+        serializers.ReadOnlyField(
+            source='user.username'
+        )
     )
 
     avatar = serializers.ImageField(
@@ -158,117 +230,178 @@ class CommentSerializer(serializers.ModelSerializer):
         ]
 
 
-class UserGameEntrySerializer(serializers.ModelSerializer):
-    game_title = serializers.CharField(
-        write_only=True
+class UserGameEntrySerializer(
+    serializers.ModelSerializer
+):
+    game_catalog = (
+        GameCatalogSerializer(
+            read_only=True
+        )
     )
 
-    platform_name = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True
+    game_catalog_id = (
+        serializers.PrimaryKeyRelatedField(
+            source='game_catalog',
+            queryset=(
+                GameCatalog.objects.all()
+            ),
+            write_only=True,
+            required=False
+        )
     )
 
-    genre = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True
+    status_display = (
+        serializers.CharField(
+            source='get_status_display',
+            read_only=True
+        )
     )
 
-    release_year = serializers.IntegerField(
-        write_only=True,
-        required=False,
-        allow_null=True
-    )
-
-    cover_image = serializers.ImageField(
-        write_only=True,
-        required=False
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
     )
 
     class Meta:
         model = UserGameEntry
-        fields = '__all__'
-        depth = 1
 
-        read_only_fields = [
+        fields = [
+            'id',
             'user',
+            'username',
+            'game_catalog',
+            'game_catalog_id',
+            'status',
+            'status_display',
+            'rating',
+            'play_time',
+            'review',
+            'hall_of_fame',
+            'created_at',
+            'updated_at',
         ]
 
-    def create(self, validated_data):
-        title = validated_data.pop(
-            'game_title'
+        read_only_fields = [
+            'id',
+            'user',
+            'username',
+            'game_catalog',
+            'status_display',
+            'created_at',
+            'updated_at',
+        ]
+
+    def validate_rating(
+        self,
+        value
+    ):
+        if value is None:
+            return value
+
+        value = Decimal(
+            str(value)
         )
 
-        plat_name = validated_data.pop(
-            'platform_name',
-            None
-        )
-
-        genre = validated_data.pop(
-            'genre',
-            ''
-        )
-
-        year = validated_data.pop(
-            'release_year',
-            None
-        )
-
-        cover = validated_data.pop(
-            'cover_image',
-            None
-        )
-
-        game_obj, created = (
-            GameCatalog.objects.get_or_create(
-                title=title
-            )
-        )
-
-        if created or not game_obj.cover_image:
-            if plat_name:
-                game_obj.platform = (
-                    Platform.objects.filter(
-                        name=plat_name
-                    ).first()
+        if value < Decimal('0.0'):
+            raise serializers.ValidationError(
+                (
+                    'A nota não pode ser '
+                    'menor que 0.'
                 )
+            )
 
-            game_obj.genre = genre
-            game_obj.release_year = year
+        if value > Decimal('10.0'):
+            raise serializers.ValidationError(
+                (
+                    'A nota não pode ser '
+                    'maior que 10.'
+                )
+            )
 
-            if cover:
-                game_obj.cover_image = cover
+        if (
+            value
+            % Decimal('0.5')
+            != 0
+        ):
+            raise serializers.ValidationError(
+                (
+                    'A nota deve variar '
+                    'de 0,5 em 0,5.'
+                )
+            )
 
-            game_obj.save()
+        return value
 
-        validated_data[
-            'game_catalog'
-        ] = game_obj
-
+    def create(
+        self,
+        validated_data
+    ):
         validated_data[
             'user'
-        ] = self.context[
-            'request'
-        ].user
+        ] = (
+            self.context[
+                'request'
+            ].user
+        )
 
         return super().create(
             validated_data
         )
 
 
-class UserOwnedGameSerializer(serializers.ModelSerializer):
-    game_catalog = GameCatalogSerializer(
-        read_only=True
+class UserOwnedGameSerializer(
+    serializers.ModelSerializer
+):
+    game_catalog = (
+        GameCatalogSerializer(
+            read_only=True
+        )
     )
 
-    platform = PlatformSerializer(
-        read_only=True
+    game_catalog_id = (
+        serializers.PrimaryKeyRelatedField(
+            source='game_catalog',
+            queryset=(
+                GameCatalog.objects.all()
+            ),
+            write_only=True,
+            required=False
+        )
     )
 
-    ownership_type_display = serializers.CharField(
-        source='get_ownership_type_display',
-        read_only=True
+    platform = (
+        PlatformSerializer(
+            read_only=True
+        )
+    )
+
+    platform_id = (
+        serializers.PrimaryKeyRelatedField(
+            source='platform',
+            queryset=(
+                Platform.objects.all()
+            ),
+            write_only=True,
+            required=False
+        )
+    )
+
+    ownership_type_display = (
+        serializers.CharField(
+            source=(
+                'get_ownership_type_display'
+            ),
+            read_only=True
+        )
+    )
+
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
     )
 
     class Meta:
@@ -277,25 +410,62 @@ class UserOwnedGameSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'user',
+            'username',
             'game_catalog',
+            'game_catalog_id',
             'platform',
+            'platform_id',
             'ownership_type',
             'ownership_type_display',
             'completed',
             'acquired_at',
             'created_at',
+            'updated_at',
         ]
 
         read_only_fields = [
+            'id',
             'user',
+            'username',
+            'game_catalog',
+            'platform',
+            'ownership_type_display',
+            'created_at',
+            'updated_at',
         ]
+
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data[
+            'user'
+        ] = (
+            self.context[
+                'request'
+            ].user
+        )
+
+        return super().create(
+            validated_data
+        )
 
 
 class PokemonHallOfFameSerializer(
     serializers.ModelSerializer
 ):
-    game_title = serializers.CharField(
-        write_only=True
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
+    )
+
+    game_title = (
+        serializers.CharField(
+            source='game_name',
+            required=False
+        )
     )
 
     sprite_1 = serializers.ImageField(
@@ -330,73 +500,151 @@ class PokemonHallOfFameSerializer(
 
     class Meta:
         model = PokemonHallOfFame
-        fields = '__all__'
-        depth = 1
+
+        fields = [
+            'id',
+            'user',
+            'username',
+            'game_name',
+            'game_title',
+            'sprite_1',
+            'sprite_2',
+            'sprite_3',
+            'sprite_4',
+            'sprite_5',
+            'sprite_6',
+        ]
 
         read_only_fields = [
             'user',
-            'game_catalog',
+            'username',
         ]
 
-    def create(self, validated_data):
-        title = validated_data.pop(
-            'game_title'
+        extra_kwargs = {
+            'game_name': {
+                'required': False,
+            },
+        }
+
+    def validate(
+        self,
+        attrs
+    ):
+        game_name = (
+            attrs.get(
+                'game_name'
+            )
         )
 
-        game_obj = (
-            GameCatalog.objects.filter(
-                title=title
-            ).first()
-        )
+        if (
+            not game_name
+            and self.instance is None
+        ):
+            raise serializers.ValidationError(
+                {
+                    'game_title':
+                        (
+                            'Informe o nome '
+                            'do jogo.'
+                        )
+                }
+            )
 
-        if not game_obj:
-            raise serializers.ValidationError({
-                'game_title':
-                    'Jogo não encontrado no catálogo.'
-            })
+        return attrs
 
-        validated_data[
-            'game_catalog'
-        ] = game_obj
-
+    def create(
+        self,
+        validated_data
+    ):
         validated_data[
             'user'
-        ] = self.context[
-            'request'
-        ].user
+        ] = (
+            self.context[
+                'request'
+            ].user
+        )
 
         return super().create(
             validated_data
         )
 
 
-class ConsoleSerializer(serializers.ModelSerializer):
+class ConsoleSerializer(
+    serializers.ModelSerializer
+):
+    platform = (
+        PlatformSerializer(
+            read_only=True
+        )
+    )
+
+    platform_id = (
+        serializers.PrimaryKeyRelatedField(
+            source='platform',
+            queryset=(
+                Platform.objects.all()
+            ),
+            write_only=True
+        )
+    )
+
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
+    )
+
     class Meta:
         model = Console
-        fields = '__all__'
 
-        read_only_fields = [
+        fields = [
+            'id',
             'user',
+            'username',
+            'platform',
+            'platform_id',
+            'acquired_at',
+            'created_at',
         ]
 
+        read_only_fields = [
+            'id',
+            'user',
+            'username',
+            'platform',
+            'created_at',
+        ]
 
-# =========================================================
-# BOARD GAMES - MODELO ANTIGO
-# =========================================================
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data[
+            'user'
+        ] = (
+            self.context[
+                'request'
+            ].user
+        )
 
-class BoardGameSerializer(serializers.ModelSerializer):
+        return super().create(
+            validated_data
+        )
+
+
+class BoardGameSerializer(
+    serializers.ModelSerializer
+):
     class Meta:
         model = BoardGame
+
         fields = '__all__'
 
         read_only_fields = [
             'user',
         ]
 
-
-# =========================================================
-# BOARD GAMES - CATÁLOGO
-# =========================================================
 
 class BoardGameCatalogSerializer(
     serializers.ModelSerializer
@@ -405,8 +653,10 @@ class BoardGameCatalogSerializer(
         read_only=True
     )
 
-    player_count = serializers.CharField(
-        read_only=True
+    player_count = (
+        serializers.CharField(
+            read_only=True
+        )
     )
 
     class Meta:
@@ -448,26 +698,33 @@ class BoardGameCatalogSerializer(
         ]
 
 
-# =========================================================
-# BOARD GAMES - RELAÇÃO DO USUÁRIO
-# =========================================================
-
 class UserBoardGameSerializer(
     serializers.ModelSerializer
 ):
-    game = BoardGameCatalogSerializer(
-        read_only=True
+    game = (
+        BoardGameCatalogSerializer(
+            read_only=True
+        )
     )
 
-    game_id = serializers.PrimaryKeyRelatedField(
-        source='game',
-        queryset=BoardGameCatalog.objects.all(),
-        write_only=True
+    game_id = (
+        serializers
+        .PrimaryKeyRelatedField(
+            source='game',
+            queryset=(
+                BoardGameCatalog
+                .objects
+                .all()
+            ),
+            write_only=True
+        )
     )
 
-    username = serializers.CharField(
-        source='user.username',
-        read_only=True
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
     )
 
     class Meta:
@@ -495,30 +752,51 @@ class UserBoardGameSerializer(
             'updated_at',
         ]
 
-    def validate_rating(self, value):
+    def validate_rating(
+        self,
+        value
+    ):
         if value is None:
             return value
 
-        value = Decimal(str(value))
+        value = Decimal(
+            str(value)
+        )
 
         if value < Decimal('0.0'):
             raise serializers.ValidationError(
-                'A nota não pode ser menor que 0.'
+                (
+                    'A nota não pode ser '
+                    'menor que 0.'
+                )
             )
 
         if value > Decimal('10.0'):
             raise serializers.ValidationError(
-                'A nota não pode ser maior que 10.'
+                (
+                    'A nota não pode ser '
+                    'maior que 10.'
+                )
             )
 
-        if value % Decimal('0.5') != 0:
+        if (
+            value
+            % Decimal('0.5')
+            != 0
+        ):
             raise serializers.ValidationError(
-                'A nota deve variar de 0,5 em 0,5.'
+                (
+                    'A nota deve variar '
+                    'de 0,5 em 0,5.'
+                )
             )
 
         return value
 
-    def validate(self, attrs):
+    def validate(
+        self,
+        attrs
+    ):
         owned = attrs.get(
             'owned',
             getattr(
@@ -555,8 +833,13 @@ class UserBoardGameSerializer(
 
         return attrs
 
-    def create(self, validated_data):
-        validated_data['user'] = (
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data[
+            'user'
+        ] = (
             self.context[
                 'request'
             ].user
@@ -567,18 +850,75 @@ class UserBoardGameSerializer(
         )
 
 
-class PokemonSerializer(serializers.ModelSerializer):
+class PokemonSerializer(
+    serializers.ModelSerializer
+):
     class Meta:
         model = Pokemon
+
         fields = '__all__'
 
 
-class UserPokemonSerializer(serializers.ModelSerializer):
+class UserPokemonSerializer(
+    serializers.ModelSerializer
+):
+    pokemon = (
+        PokemonSerializer(
+            read_only=True
+        )
+    )
+
+    pokemon_id = (
+        serializers.PrimaryKeyRelatedField(
+            source='pokemon',
+            queryset=(
+                Pokemon.objects.all()
+            ),
+            write_only=True,
+            required=False
+        )
+    )
+
+    username = (
+        serializers.CharField(
+            source='user.username',
+            read_only=True
+        )
+    )
+
     class Meta:
         model = UserPokemon
-        fields = '__all__'
-        depth = 1
+
+        fields = [
+            'id',
+            'user',
+            'username',
+            'pokemon',
+            'pokemon_id',
+            'is_shiny',
+            'captured_at',
+        ]
 
         read_only_fields = [
+            'id',
             'user',
+            'username',
+            'pokemon',
+            'captured_at',
         ]
+
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data[
+            'user'
+        ] = (
+            self.context[
+                'request'
+            ].user
+        )
+
+        return super().create(
+            validated_data
+        )

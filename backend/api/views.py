@@ -1,12 +1,14 @@
 import os
 import re
 import html
+import time
 import xml.etree.ElementTree as ET
 
 import requests
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.auth.models import User
 
 from rest_framework import (
@@ -35,7 +37,6 @@ from rest_framework.parsers import (
     FormParser,
 )
 
-
 from .models import (
     Platform,
     GameCatalog,
@@ -45,11 +46,9 @@ from .models import (
     UserPokemon,
     PokemonHallOfFame,
     Console,
-
     BoardGame,
     BoardGameCatalog,
     UserBoardGame,
-
     UserProfile,
     Achievement,
     Follow,
@@ -57,26 +56,20 @@ from .models import (
     Comment,
 )
 
-
 from .serializers import (
     PlatformSerializer,
     GameCatalogSerializer,
     UserGameEntrySerializer,
     UserOwnedGameSerializer,
-
     PokemonSerializer,
     UserPokemonSerializer,
     PokemonHallOfFameSerializer,
-
     ConsoleSerializer,
-
     BoardGameSerializer,
     BoardGameCatalogSerializer,
     UserBoardGameSerializer,
-
     UserProfileSerializer,
     AchievementSerializer,
-
     FollowSerializer,
     LikeSerializer,
     CommentSerializer,
@@ -88,9 +81,28 @@ BGG_BASE_URL = (
 )
 
 
+TWITCH_TOKEN_URL = (
+    'https://id.twitch.tv/oauth2/token'
+)
+
+
+IGDB_BASE_URL = (
+    'https://api.igdb.com/v4'
+)
+
+
+_twitch_token_cache = {
+    'access_token': None,
+    'expires_at': 0,
+}
+
+
 def get_bgg_headers():
-    token = os.environ.get(
-        'BGG_API_TOKEN'
+    token = (
+        settings.BGG_API_TOKEN
+        or os.environ.get(
+            'BGG_API_TOKEN'
+        )
     )
 
     if not token:
@@ -112,7 +124,9 @@ def clean_bgg_text(text):
     if not text:
         return ''
 
-    text = html.unescape(text)
+    text = html.unescape(
+        text
+    )
 
     text = re.sub(
         r'<br\s*/?>',
@@ -146,7 +160,9 @@ def get_xml_value(
     tag,
     default=None
 ):
-    child = element.find(tag)
+    child = element.find(
+        tag
+    )
 
     if child is None:
         return default
@@ -165,7 +181,10 @@ def safe_int(value):
         return None
 
     try:
-        return int(value)
+        return int(
+            value
+        )
+
     except (
         TypeError,
         ValueError
@@ -184,6 +203,7 @@ def safe_decimal(value):
         return Decimal(
             str(value)
         )
+
     except Exception:
         return None
 
@@ -212,7 +232,9 @@ def get_primary_name(item):
     return ''
 
 
-def parse_bgg_search(xml_content):
+def parse_bgg_search(
+    xml_content
+):
     root = ET.fromstring(
         xml_content
     )
@@ -223,15 +245,21 @@ def parse_bgg_search(xml_content):
         'item'
     ):
         bgg_id = safe_int(
-            item.attrib.get('id')
+            item.attrib.get(
+                'id'
+            )
         )
 
-        name_element = item.find(
-            'name'
+        name_element = (
+            item.find(
+                'name'
+            )
         )
 
-        year_element = item.find(
-            'yearpublished'
+        year_element = (
+            item.find(
+                'yearpublished'
+            )
         )
 
         name = ''
@@ -248,14 +276,13 @@ def parse_bgg_search(xml_content):
 
         year = None
 
-        if (
-            year_element
-            is not None
-        ):
+        if year_element is not None:
             year = safe_int(
                 year_element
                 .attrib
-                .get('value')
+                .get(
+                    'value'
+                )
             )
 
         results.append({
@@ -338,8 +365,10 @@ def parse_bgg_game(
             )
         )
 
-    image_element = item.find(
-        'image'
+    image_element = (
+        item.find(
+            'image'
+        )
     )
 
     thumbnail_element = (
@@ -351,18 +380,12 @@ def parse_bgg_game(
     cover_url = None
     thumbnail_url = None
 
-    if (
-        image_element
-        is not None
-    ):
+    if image_element is not None:
         cover_url = (
             image_element.text
         )
 
-    if (
-        thumbnail_element
-        is not None
-    ):
+    if thumbnail_element is not None:
         thumbnail_url = (
             thumbnail_element.text
         )
@@ -522,10 +545,7 @@ def parse_bgg_game(
                     )
                 )
 
-            if (
-                average_weight
-                is not None
-            ):
+            if average_weight is not None:
                 bgg_weight = (
                     safe_decimal(
                         average_weight
@@ -603,18 +623,23 @@ def request_bgg(
     endpoint,
     params=None
 ):
-    headers = get_bgg_headers()
+    headers = (
+        get_bgg_headers()
+    )
 
     if not headers:
         return {
-            'success': False,
+            'success':
+                False,
 
-            'status': 500,
+            'status':
+                500,
 
-            'error': (
-                'BGG_API_TOKEN '
-                'não configurado.'
-            ),
+            'error':
+                (
+                    'BGG_API_TOKEN '
+                    'não configurado.'
+                ),
         }
 
     url = (
@@ -623,11 +648,13 @@ def request_bgg(
     )
 
     try:
-        response = requests.get(
-            url,
-            params=params or {},
-            headers=headers,
-            timeout=20
+        response = (
+            requests.get(
+                url,
+                params=params or {},
+                headers=headers,
+                timeout=20
+            )
         )
 
     except requests.RequestException as error:
@@ -730,27 +757,589 @@ def request_bgg(
     }
 
 
+def get_twitch_access_token():
+    client_id = (
+        settings.TWITCH_CLIENT_ID
+    )
+
+    client_secret = (
+        settings.TWITCH_CLIENT_SECRET
+    )
+
+    if (
+        not client_id
+        or not client_secret
+    ):
+        raise RuntimeError(
+            (
+                'TWITCH_CLIENT_ID '
+                'ou '
+                'TWITCH_CLIENT_SECRET '
+                'não configurado.'
+            )
+        )
+
+    current_time = (
+        time.time()
+    )
+
+    cached_token = (
+        _twitch_token_cache.get(
+            'access_token'
+        )
+    )
+
+    expires_at = (
+        _twitch_token_cache.get(
+            'expires_at',
+            0
+        )
+    )
+
+    if (
+        cached_token
+        and current_time
+        < expires_at
+    ):
+        return cached_token
+
+    response = (
+        requests.post(
+            TWITCH_TOKEN_URL,
+            params={
+                'client_id':
+                    client_id,
+
+                'client_secret':
+                    client_secret,
+
+                'grant_type':
+                    'client_credentials',
+            },
+            timeout=20,
+        )
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    access_token = (
+        data.get(
+            'access_token'
+        )
+    )
+
+    expires_in = (
+        data.get(
+            'expires_in',
+            0
+        )
+    )
+
+    if not access_token:
+        raise RuntimeError(
+            (
+                'A Twitch não retornou '
+                'um access token.'
+            )
+        )
+
+    _twitch_token_cache[
+        'access_token'
+    ] = access_token
+
+    _twitch_token_cache[
+        'expires_at'
+    ] = (
+        current_time
+        +
+        max(
+            int(expires_in) - 60,
+            0
+        )
+    )
+
+    return access_token
+
+
+def get_igdb_headers():
+    token = (
+        get_twitch_access_token()
+    )
+
+    return {
+        'Client-ID':
+            settings.TWITCH_CLIENT_ID,
+
+        'Authorization':
+            f'Bearer {token}',
+
+        'Accept':
+            'application/json',
+    }
+
+
+def get_igdb_cover_url(
+    image_id,
+    size='cover_big'
+):
+    if not image_id:
+        return None
+
+    return (
+        'https://images.igdb.com/'
+        'igdb/image/upload/'
+        f't_{size}/'
+        f'{image_id}.jpg'
+    )
+
+
+def get_igdb_logo_url(
+    image_id,
+    size='logo_med'
+):
+    if not image_id:
+        return None
+
+    return (
+        'https://images.igdb.com/'
+        'igdb/image/upload/'
+        f't_{size}/'
+        f'{image_id}.png'
+    )
+
+
+def normalize_igdb_platform(platform):
+    logo = platform.get('platform_logo') or {}
+
+    return {
+        'igdb_id': platform.get('id'),
+        'name': platform.get('name'),
+        'abbreviation': platform.get('abbreviation'),
+        'slug': platform.get('slug'),
+        'generation': platform.get('generation'),
+        'logo_url': get_igdb_logo_url(
+            logo.get('image_id')
+        ),
+    }
+
+
+def normalize_igdb_game(game):
+    cover = game.get('cover') or {}
+
+    platform_data = [
+        normalize_igdb_platform(platform)
+        for platform in game.get('platforms', [])
+        if platform.get('id')
+    ]
+
+    genres = [
+        genre.get('name')
+        for genre in game.get('genres', [])
+        if genre.get('name')
+    ]
+
+    developers = []
+    publishers = []
+
+    for relation in game.get('involved_companies', []):
+        company = relation.get('company') or {}
+        company_name = company.get('name')
+
+        if not company_name:
+            continue
+
+        if relation.get('developer'):
+            developers.append(company_name)
+
+        if relation.get('publisher'):
+            publishers.append(company_name)
+
+    release_year = None
+    first_release_date = game.get('first_release_date')
+
+    if first_release_date:
+        try:
+            release_year = time.gmtime(
+                first_release_date
+            ).tm_year
+        except Exception:
+            release_year = None
+
+    return {
+        'igdb_id': game.get('id'),
+        'name': game.get('name'),
+        'slug': game.get('slug'),
+        'description': game.get('summary'),
+        'storyline': game.get('storyline'),
+        'release_year': release_year,
+        'cover_url': get_igdb_cover_url(
+            cover.get('image_id')
+        ),
+        'platforms': [
+            platform.get('name')
+            for platform in platform_data
+            if platform.get('name')
+        ],
+        'platform_data': platform_data,
+        'genres': genres,
+        'developers': developers,
+        'publishers': publishers,
+        'rating': game.get('rating'),
+        'aggregated_rating': game.get('aggregated_rating'),
+    }
+
+
+def request_igdb(endpoint, body):
+    try:
+        headers = get_igdb_headers()
+        response = requests.post(
+            f'{IGDB_BASE_URL}/{endpoint}',
+            headers=headers,
+            data=body,
+            timeout=20,
+        )
+    except requests.RequestException as error:
+        return {
+            'success': False,
+            'status': 503,
+            'error': 'Não foi possível conectar à IGDB.',
+            'details': str(error),
+        }
+    except RuntimeError as error:
+        return {
+            'success': False,
+            'status': 500,
+            'error': str(error),
+        }
+
+    if response.status_code == 401:
+        _twitch_token_cache['access_token'] = None
+        _twitch_token_cache['expires_at'] = 0
+        return {
+            'success': False,
+            'status': 401,
+            'error': 'Não foi possível autenticar na Twitch/IGDB.',
+        }
+
+    if response.status_code == 429:
+        return {
+            'success': False,
+            'status': 429,
+            'error': 'Limite de requisições da IGDB atingido.',
+        }
+
+    if not response.ok:
+        return {
+            'success': False,
+            'status': response.status_code,
+            'error': 'Erro ao consultar a IGDB.',
+            'details': response.text,
+        }
+
+    try:
+        data = response.json()
+    except ValueError:
+        return {
+            'success': False,
+            'status': 502,
+            'error': 'A IGDB retornou uma resposta inválida.',
+        }
+
+    return {
+        'success': True,
+        'data': data,
+    }
+
+
+def _escape_igdb_search(query):
+    value = str(query)
+    value = value.replace(chr(92), chr(92) * 2)
+    value = value.replace(chr(34), chr(92) + chr(34))
+    return value
+
+
+def search_igdb_games(query, limit=20):
+    safe_query = _escape_igdb_search(query)
+
+    body = f"""
+        search "{safe_query}";
+        fields
+            id,
+            name,
+            slug,
+            summary,
+            storyline,
+            first_release_date,
+            cover.image_id,
+            platforms.id,
+            platforms.name,
+            platforms.abbreviation,
+            platforms.slug,
+            platforms.generation,
+            platforms.platform_logo.image_id,
+            genres.name,
+            involved_companies.developer,
+            involved_companies.publisher,
+            involved_companies.company.name,
+            rating,
+            aggregated_rating;
+        limit {int(limit)};
+    """
+
+    result = request_igdb('games', body)
+
+    if not result.get('success'):
+        return result
+
+    return {
+        'success': True,
+        'games': [
+            normalize_igdb_game(game)
+            for game in result.get('data', [])
+        ],
+    }
+
+
+def get_igdb_game_detail(igdb_id):
+    body = f"""
+        fields
+            id,
+            name,
+            slug,
+            summary,
+            storyline,
+            first_release_date,
+            cover.image_id,
+            platforms.id,
+            platforms.name,
+            platforms.abbreviation,
+            platforms.slug,
+            platforms.generation,
+            platforms.platform_logo.image_id,
+            genres.name,
+            involved_companies.developer,
+            involved_companies.publisher,
+            involved_companies.company.name,
+            rating,
+            aggregated_rating;
+        where id = {int(igdb_id)};
+        limit 1;
+    """
+
+    result = request_igdb('games', body)
+
+    if not result.get('success'):
+        return result
+
+    games = result.get('data', [])
+
+    if not games:
+        return {
+            'success': False,
+            'status': 404,
+            'error': 'Jogo não encontrado na IGDB.',
+        }
+
+    return {
+        'success': True,
+        'game': normalize_igdb_game(games[0]),
+    }
+
+
+def search_igdb_platforms(query, limit=20):
+    safe_query = _escape_igdb_search(query)
+
+    body = f"""
+        search "{safe_query}";
+        fields
+            id,
+            name,
+            abbreviation,
+            slug,
+            generation,
+            platform_logo.image_id;
+        limit {int(limit)};
+    """
+
+    result = request_igdb('platforms', body)
+
+    if not result.get('success'):
+        return result
+
+    return {
+        'success': True,
+        'platforms': [
+            normalize_igdb_platform(platform)
+            for platform in result.get('data', [])
+        ],
+    }
+
+
+def get_igdb_platform_detail(igdb_id):
+    body = f"""
+        fields
+            id,
+            name,
+            abbreviation,
+            slug,
+            generation,
+            platform_logo.image_id;
+        where id = {int(igdb_id)};
+        limit 1;
+    """
+
+    result = request_igdb('platforms', body)
+
+    if not result.get('success'):
+        return result
+
+    platforms = result.get('data', [])
+
+    if not platforms:
+        return {
+            'success': False,
+            'status': 404,
+            'error': 'Plataforma não encontrada na IGDB.',
+        }
+
+    return {
+        'success': True,
+        'platform': normalize_igdb_platform(platforms[0]),
+    }
+
+
+def save_igdb_platform(platform_data):
+    if not platform_data:
+        return None
+
+    igdb_id = (
+        platform_data.get('igdb_id')
+        or platform_data.get('id')
+    )
+
+    name = (
+        platform_data.get('name')
+        or ''
+    ).strip()
+
+    if not igdb_id:
+        raise ValueError(
+            'Plataforma da IGDB sem ID.'
+        )
+
+    if not name:
+        name = f'IGDB {igdb_id}'
+
+    platform = (
+        Platform.objects
+        .filter(
+            igdb_id=igdb_id
+        )
+        .first()
+    )
+
+    if not platform:
+        platform = (
+            Platform.objects
+            .filter(
+                name__iexact=name
+            )
+            .first()
+        )
+
+    if platform:
+        platform.igdb_id = igdb_id
+        platform.name = name
+
+        platform.abbreviation = (
+            platform_data.get(
+                'abbreviation'
+            )
+        )
+
+        platform.slug = (
+            platform_data.get(
+                'slug'
+            )
+        )
+
+        platform.generation = (
+            platform_data.get(
+                'generation'
+            )
+        )
+
+        logo_url = (
+            platform_data.get(
+                'logo_url'
+            )
+        )
+
+        if logo_url:
+            platform.logo_url = logo_url
+
+        platform.save()
+
+        return platform
+
+    platform = (
+        Platform.objects.create(
+            igdb_id=igdb_id,
+            name=name,
+            abbreviation=(
+                platform_data.get(
+                    'abbreviation'
+                )
+            ),
+            slug=(
+                platform_data.get(
+                    'slug'
+                )
+            ),
+            generation=(
+                platform_data.get(
+                    'generation'
+                )
+            ),
+            logo_url=(
+                platform_data.get(
+                    'logo_url'
+                )
+            ),
+        )
+    )
+
+    return platform
+
 class CustomAuthToken(
     ObtainAuthToken
 ):
-
     def post(
         self,
         request,
         *args,
         **kwargs
     ):
-        email = request.data.get(
-            'email'
+        email = (
+            request.data.get(
+                'email'
+            )
         )
 
-        password = request.data.get(
-            'password'
+        password = (
+            request.data.get(
+                'password'
+            )
         )
 
-        user = User.objects.filter(
-            email=email
-        ).first()
+        user = (
+            User.objects.filter(
+                email=email
+            )
+            .first()
+        )
 
         if (
             user is None
@@ -773,7 +1362,8 @@ class CustomAuthToken(
             )
 
         token, created = (
-            Token.objects.get_or_create(
+            Token.objects
+            .get_or_create(
                 user=user
             )
         )
@@ -939,58 +1529,90 @@ class AchievementViewSet(
 class ConsoleViewSet(
     viewsets.ModelViewSet
 ):
-    serializer_class = (
-        ConsoleSerializer
-    )
-
+    serializer_class = ConsoleSerializer
     permission_classes = [
         IsAuthenticatedOrReadOnly
     ]
 
     def get_queryset(self):
         target_username = (
-            self.request
-            .query_params
-            .get(
-                'username'
-            )
+            self.request.query_params.get('username')
+        )
+
+        queryset = Console.objects.select_related(
+            'user',
+            'platform'
         )
 
         if target_username:
-            return (
-                Console.objects
-                .filter(
-                    user__username=
-                    target_username
-                )
+            return queryset.filter(
+                user__username=target_username
             )
 
-        if (
-            self.request
-            .user
-            .is_authenticated
-        ):
-            return (
-                Console.objects
-                .filter(
-                    user=
-                    self.request.user
-                )
+        if self.request.user.is_authenticated:
+            return queryset.filter(
+                user=self.request.user
             )
 
-        return (
-            Console.objects.none()
+        return Console.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+        url_path='import-igdb'
+    )
+    def import_igdb(self, request):
+        igdb_id = request.data.get('igdb_id')
+
+        if not igdb_id:
+            return Response(
+                {'error': 'igdb_id é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            igdb_id = int(igdb_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'igdb_id inválido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = get_igdb_platform_detail(igdb_id)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        platform = save_igdb_platform(
+            result['platform']
         )
 
-    def perform_create(
-        self,
-        serializer
-    ):
-        serializer.save(
-            user=self.request.user
+        console, created = Console.objects.get_or_create(
+            user=request.user,
+            platform=platform
         )
 
-
+        return Response(
+            ConsoleSerializer(
+                console,
+                context={'request': request}
+            ).data,
+            status=(
+                status.HTTP_201_CREATED
+                if created
+                else status.HTTP_200_OK
+            )
+        )
 class UserGameEntryViewSet(
     viewsets.ModelViewSet
 ):
@@ -1034,8 +1656,7 @@ class UserGameEntryViewSet(
             )
 
         return (
-            UserGameEntry.objects
-            .none()
+            UserGameEntry.objects.none()
         )
 
     def perform_create(
@@ -1050,10 +1671,7 @@ class UserGameEntryViewSet(
 class UserOwnedGameViewSet(
     viewsets.ModelViewSet
 ):
-    serializer_class = (
-        UserOwnedGameSerializer
-    )
-
+    serializer_class = UserOwnedGameSerializer
     permission_classes = [
         IsAuthenticatedOrReadOnly
     ]
@@ -1064,90 +1682,50 @@ class UserOwnedGameViewSet(
             .select_related(
                 'user',
                 'game_catalog',
-                'game_catalog__platform',
                 'platform',
             )
-        )
-
-        target_username = (
-            self.request
-            .query_params
-            .get(
-                'username'
+            .prefetch_related(
+                'game_catalog__platforms'
             )
         )
 
-        platform_name = (
-            self.request
-            .query_params
-            .get(
-                'platform'
-            )
+        target_username = self.request.query_params.get(
+            'username'
         )
-
-        ownership_type = (
-            self.request
-            .query_params
-            .get(
-                'type'
-            )
+        platform_name = self.request.query_params.get(
+            'platform'
+        )
+        ownership_type = self.request.query_params.get(
+            'type'
         )
 
         if target_username:
-            queryset = (
-                queryset.filter(
-                    user__username=
-                    target_username
-                )
+            queryset = queryset.filter(
+                user__username=target_username
             )
-
-        elif (
-            self.request
-            .user
-            .is_authenticated
-        ):
-            queryset = (
-                queryset.filter(
-                    user=
-                    self.request.user
-                )
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
             )
-
         else:
-            return (
-                UserOwnedGame.objects
-                .none()
-            )
+            return UserOwnedGame.objects.none()
 
         if platform_name:
-            queryset = (
-                queryset.filter(
-                    platform__name__iexact=
-                    platform_name
-                )
+            queryset = queryset.filter(
+                platform__name__iexact=platform_name
             )
 
         if ownership_type:
-            queryset = (
-                queryset.filter(
-                    ownership_type__iexact=
-                    ownership_type
-                )
+            queryset = queryset.filter(
+                ownership_type__iexact=ownership_type
             )
 
         return queryset.order_by(
             'game_catalog__title'
         )
 
-    def perform_create(
-        self,
-        serializer
-    ):
-        serializer.save(
-            user=self.request.user
-        )
-
-
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 class FollowViewSet(
     viewsets.ModelViewSet
 ):
@@ -1211,49 +1789,399 @@ class CommentViewSet(
 class PlatformViewSet(
     viewsets.ReadOnlyModelViewSet
 ):
-    queryset = (
-        Platform.objects.all()
-    )
-
-    serializer_class = (
-        PlatformSerializer
-    )
-
-    permission_classes = [
-        AllowAny
-    ]
-
-
-class GameCatalogViewSet(
-    viewsets.ModelViewSet
-):
-    queryset = (
-        GameCatalog.objects.all()
-    )
-
-    serializer_class = (
-        GameCatalogSerializer
-    )
-
+    queryset = Platform.objects.all().order_by('name')
+    serializer_class = PlatformSerializer
     permission_classes = [
         IsAuthenticatedOrReadOnly
     ]
 
-    def perform_create(
-        self,
-        serializer
-    ):
-        serializer.save(
-            created_by=(
-                self.request.user
-                if self.request
-                .user
-                .is_authenticated
-                else None
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='search-igdb'
+    )
+    def search_igdb(self, request):
+        query = request.query_params.get('q', '').strip()
+
+        if not query:
+            return Response(
+                {
+                    'error': (
+                        'Informe uma plataforma '
+                        'para pesquisar.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
+
+        result = search_igdb_platforms(query)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        return Response(
+            result.get('platforms', [])
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+        url_path='import-igdb'
+    )
+    def import_igdb(self, request):
+        igdb_id = request.data.get('igdb_id')
+
+        if not igdb_id:
+            return Response(
+                {'error': 'igdb_id é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            igdb_id = int(igdb_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'igdb_id inválido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = get_igdb_platform_detail(igdb_id)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        platform = save_igdb_platform(
+            result['platform']
+        )
+
+        return Response(
+            PlatformSerializer(
+                platform,
+                context={'request': request}
+            ).data
         )
 
 
+class GameCatalogViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    queryset = (
+        GameCatalog.objects
+        .all()
+        .prefetch_related('platforms')
+        .order_by('title')
+    )
+    serializer_class = GameCatalogSerializer
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='search-igdb'
+    )
+    def search_igdb(self, request):
+        query = request.query_params.get('q', '').strip()
+
+        if not query:
+            return Response(
+                {
+                    'error': (
+                        'Informe um nome '
+                        'para pesquisar.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = search_igdb_games(query)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        return Response(
+            result.get('games', [])
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+        url_path='import-igdb'
+    )
+    def import_igdb(self, request):
+        igdb_id = request.data.get('igdb_id')
+        platform_name = request.data.get('platform')
+        owned = request.data.get('owned', False)
+        ownership_type = request.data.get(
+            'ownership_type',
+            'DIGITAL'
+        )
+        status_value = request.data.get('status')
+        rating = request.data.get('rating')
+        completed = request.data.get('completed', False)
+
+        if not igdb_id:
+            return Response(
+                {'error': 'igdb_id é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            igdb_id = int(igdb_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'igdb_id inválido.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = get_igdb_game_detail(igdb_id)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        igdb_game = result['game']
+        platform_objects = []
+
+        for platform_data in igdb_game.get(
+            'platform_data',
+            []
+        ):
+            try:
+                platform_objects.append(
+                    save_igdb_platform(platform_data)
+                )
+            except ValueError:
+                continue
+
+        game_catalog, created = (
+            GameCatalog.objects.update_or_create(
+                igdb_id=igdb_id,
+                defaults={
+                    'title': (
+                        igdb_game.get('name')
+                        or f'IGDB {igdb_id}'
+                    ),
+                    'slug': igdb_game.get('slug'),
+                    'description': igdb_game.get(
+                        'description'
+                    ),
+                    'storyline': igdb_game.get(
+                        'storyline'
+                    ),
+                    'cover_url': igdb_game.get(
+                        'cover_url'
+                    ),
+                    'release_year': igdb_game.get(
+                        'release_year'
+                    ),
+                    'genres': igdb_game.get(
+                        'genres',
+                        []
+                    ),
+                    'developers': igdb_game.get(
+                        'developers',
+                        []
+                    ),
+                    'publishers': igdb_game.get(
+                        'publishers',
+                        []
+                    ),
+                    'igdb_rating': safe_decimal(
+                        igdb_game.get('rating')
+                    ),
+                    'aggregated_rating': safe_decimal(
+                        igdb_game.get('aggregated_rating')
+                    ),
+                }
+            )
+        )
+
+        game_catalog.platforms.set(
+            platform_objects
+        )
+
+        selected_platform = None
+
+        if platform_name:
+            selected_platform = next(
+                (
+                    platform
+                    for platform in platform_objects
+                    if platform.name.lower()
+                    == str(platform_name).lower()
+                ),
+                None
+            )
+
+            if selected_platform is None:
+                return Response(
+                    {
+                        'error': (
+                            'A plataforma escolhida '
+                            'não pertence a esta '
+                            'versão do jogo na IGDB.'
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        elif platform_objects:
+            selected_platform = platform_objects[0]
+
+        owned_value = str(owned).lower() in [
+            'true',
+            '1',
+            'yes',
+            'sim',
+        ]
+
+        completed_value = str(completed).lower() in [
+            'true',
+            '1',
+            'yes',
+            'sim',
+        ]
+
+        owned_entry = None
+
+        if owned_value:
+            if selected_platform is None:
+                return Response(
+                    {
+                        'error': (
+                            'Escolha uma plataforma '
+                            'para adicionar o jogo '
+                            'à coleção.'
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if ownership_type not in [
+                'FISICO',
+                'DIGITAL',
+            ]:
+                return Response(
+                    {'error': 'Formato de posse inválido.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            owned_entry, owned_created = (
+                UserOwnedGame.objects.get_or_create(
+                    user=request.user,
+                    game_catalog=game_catalog,
+                    platform=selected_platform,
+                    ownership_type=ownership_type,
+                    defaults={
+                        'completed': completed_value,
+                    }
+                )
+            )
+
+            if not owned_created:
+                owned_entry.completed = completed_value
+                owned_entry.save()
+
+        game_entry = None
+
+        if status_value:
+            valid_statuses = [
+                choice[0]
+                for choice in UserGameEntry.STATUS_CHOICES
+            ]
+
+            if status_value not in valid_statuses:
+                return Response(
+                    {'error': 'Status inválido.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            normalized_rating = (
+                None
+                if rating in [None, '']
+                else safe_decimal(rating)
+            )
+
+            game_entry, entry_created = (
+                UserGameEntry.objects.get_or_create(
+                    user=request.user,
+                    game_catalog=game_catalog,
+                    defaults={
+                        'status': status_value,
+                        'rating': normalized_rating,
+                    }
+                )
+            )
+
+            if not entry_created:
+                game_entry.status = status_value
+
+                if rating not in [None, '']:
+                    game_entry.rating = normalized_rating
+
+                game_entry.save()
+
+        return Response(
+            {
+                'message': (
+                    f'{game_catalog.title} '
+                    'salvo com sucesso.'
+                ),
+                'game': GameCatalogSerializer(
+                    game_catalog,
+                    context={'request': request}
+                ).data,
+                'owned_game': (
+                    UserOwnedGameSerializer(
+                        owned_entry,
+                        context={'request': request}
+                    ).data
+                    if owned_entry
+                    else None
+                ),
+                'game_entry': (
+                    UserGameEntrySerializer(
+                        game_entry,
+                        context={'request': request}
+                    ).data
+                    if game_entry
+                    else None
+                ),
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if created
+                else status.HTTP_200_OK
+            )
+        )
 class PokemonViewSet(
     viewsets.ModelViewSet
 ):
@@ -1390,10 +2318,6 @@ class PokemonHallOfFameViewSet(
         )
 
 
-# =========================================================
-# BOARD GAME ANTIGO
-# =========================================================
-
 class BoardGameViewSet(
     viewsets.ModelViewSet
 ):
@@ -1448,10 +2372,6 @@ class BoardGameViewSet(
             user=self.request.user
         )
 
-
-# =========================================================
-# NOVO CATÁLOGO DE BOARD GAMES
-# =========================================================
 
 class BoardGameCatalogViewSet(
     viewsets.ReadOnlyModelViewSet
@@ -1510,15 +2430,17 @@ class BoardGameCatalogViewSet(
                 )
             )
 
-        result = request_bgg(
-            'search',
-            params={
-                'query':
-                    query,
+        result = (
+            request_bgg(
+                'search',
+                params={
+                    'query':
+                        query,
 
-                'type':
-                    'boardgame',
-            }
+                    'type':
+                        'boardgame',
+                }
+            )
         )
 
         if not result[
@@ -1565,7 +2487,6 @@ class BoardGameCatalogViewSet(
             games
         )
 
-
     @action(
         detail=False,
         methods=[
@@ -1584,15 +2505,17 @@ class BoardGameCatalogViewSet(
         request,
         bgg_id=None
     ):
-        result = request_bgg(
-            'thing',
-            params={
-                'id':
-                    bgg_id,
+        result = (
+            request_bgg(
+                'thing',
+                params={
+                    'id':
+                        bgg_id,
 
-                'stats':
-                    1,
-            }
+                    'stats':
+                        1,
+                }
+            )
         )
 
         if not result[
@@ -1653,7 +2576,6 @@ class BoardGameCatalogViewSet(
         return Response(
             game_data
         )
-
 
     @action(
         detail=False,
@@ -1754,15 +2676,17 @@ class BoardGameCatalogViewSet(
         )
 
         if not game:
-            result = request_bgg(
-                'thing',
-                params={
-                    'id':
-                        bgg_id,
+            result = (
+                request_bgg(
+                    'thing',
+                    params={
+                        'id':
+                            bgg_id,
 
-                    'stats':
-                        1,
-                }
+                        'stats':
+                            1,
+                    }
+                )
             )
 
             if not result[
@@ -1910,10 +2834,6 @@ class BoardGameCatalogViewSet(
         )
 
 
-# =========================================================
-# COLEÇÃO PESSOAL DE BOARD GAMES
-# =========================================================
-
 class UserBoardGameViewSet(
     viewsets.ModelViewSet
 ):
@@ -1984,10 +2904,7 @@ class UserBoardGameViewSet(
                 .none()
             )
 
-        if (
-            owned
-            is not None
-        ):
+        if owned is not None:
             owned_value = (
                 str(owned)
                 .lower()
@@ -2006,10 +2923,7 @@ class UserBoardGameViewSet(
                 )
             )
 
-        if (
-            played
-            is not None
-        ):
+        if played is not None:
             played_value = (
                 str(played)
                 .lower()
