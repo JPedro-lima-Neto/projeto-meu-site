@@ -1,25 +1,128 @@
-🎮 Meu Acervo Geek by Lupa
-Um portal pessoal full-stack para catalogar e exibir todo o meu acervo de jogos, consoles, jogos de tabuleiro e conquistas no universo Pokémon.
+# 🎮 Meu Acervo Geek by Lupa
 
-✨ Funcionalidades Principais
-Biblioteca de Jogos: Lista de jogos jogados, jogando e zerados (com reviews).
+Um portal pessoal full-stack criado para organizar, catalogar e exibir meu universo geek em um único lugar.
 
-Acervo Físico: Galeria dos meus consoles e jogos de tabuleiro (com regras).
+O projeto reúne videogames, consoles, jogos de tabuleiro, Beyblade X e Pokémon, permitindo registrar coleções, progresso, conquistas e outras informações de cada hobby.
 
-Seção Pokémon: Hall da Fama (times que zeraram) e Pokédex Geral (rastreador de capturas).
+Além de funcionar como meu acervo pessoal, o projeto possui sistema de usuários, perfis e uma área administrativa para gerenciamento do conteúdo.
 
-Comunidade: Usuários podem se cadastrar e enviar feedback.
+---
 
-Painel Admin (CMS): Uma área privada para eu gerenciar todo o conteúdo do site sem precisar mexer no código.
+## ✨ Funcionalidades
 
-🛠️ Stack de Tecnologia
-Backend: Python, Django, Django REST Framework
+### 🎮 Jogos e Consoles
 
-Frontend: React, Vite, JavaScript
+- Catálogo de jogos por console
+- Organização da coleção de videogames
+- Registro dos consoles do acervo
+- Status dos jogos
+- Acompanhamento dos jogos da biblioteca
+- Páginas individuais para os jogos
+- Interface temática de acordo com cada console
 
-Banco de Dados: SQLite3 (Desenvolvimento)
+### 🎲 Jogos de Tabuleiro
 
-Estilização: CSS Puro
+- Catálogo de jogos de tabuleiro
+- Informações e detalhes de cada jogo
+- Regras dos jogos
+- Organização da coleção física
 
-👨‍💻 Autor
-Pedro (Lupa) - GitHub
+### 🌀 Beyblade X
+
+- Catálogo de Beyblades
+- Organização das peças da coleção
+- Blades
+- Ratchets
+- Bits
+- Lock Chips
+- Assist Blades
+- Registro e visualização das combinações disponíveis
+
+### ⚡ Pokémon
+
+Uma área inspirada nos RPGs portáteis clássicos da franquia Pokémon, apresentada através de uma cidade interativa em pixel art.
+
+Atualmente inclui:
+
+- 🧪 **Laboratório Pokémon**
+  - Pokédex
+  - Shiny Dex
+  - Registro dos Pokémon encontrados
+
+- 🏆 **Hall da Fama**
+  - Registro das jornadas concluídas
+  - Times utilizados para finalizar cada jogo
+
+- 🎮 **Game Center**
+  - Jogos Pokémon da coleção
+  - Progresso das jornadas
+
+- 🏠 **Casa do Treinador**
+  - Trainer Card
+  - Informações do treinador
+
+- 🏅 **Ginásio**
+  - Área destinada às conquistas e insígnias
+
+- 💻 **Centro de Coleções**
+  - Favoritos
+  - Coleção Pokémon
+
+Outras áreas do mundo Pokémon continuam em desenvolvimento.
+
+### 👤 Usuários
+
+- Cadastro
+- Login
+- Perfil de usuário
+- Autenticação
+- Sistema de sugestões e feedback
+
+### ⚙️ Painel Administrativo
+
+O projeto utiliza o Django Admin como CMS, permitindo gerenciar o conteúdo do site sem precisar editar diretamente o código.
+
+---
+
+## 🛠️ Tecnologias
+
+### Backend
+
+- Python
+- Django
+- Django REST Framework
+- SQLite3
+
+### Frontend
+
+- React
+- Vite
+- JavaScript / JSX
+- React Router
+- CSS
+
+### Outras ferramentas
+
+- Git
+- GitHub
+- npm
+- Django Admin
+
+---
+
+## 📁 Estrutura do Projeto
+
+```text
+projeto-meu-site/
+├── backend/
+│   ├── manage.py
+│   ├── db.sqlite3
+│   └── ...
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+│
+└── README.md
