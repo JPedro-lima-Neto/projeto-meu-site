@@ -3,6 +3,7 @@ import re
 import html
 import time
 import xml.etree.ElementTree as ET
+from django.db import models
 
 import requests
 
@@ -56,6 +57,18 @@ from .models import (
     Comment,
     LibraryCatalog,
     UserLibraryEntry,
+    BeyBlade,
+    BeyRatchet,
+    BeyBit,
+    UserBeyBlade,
+    UserBeyRatchet,
+    UserBeyBit,
+    BeybladeBuild,
+    BeyAssistBlade,
+    BeyLockChip,
+    UserBeyAssistBlade,
+    UserBeyLockChip,
+    BeybladeRelease,
 )
 
 from .serializers import (
@@ -77,6 +90,18 @@ from .serializers import (
     CommentSerializer,
     LibraryCatalogSerializer,
     UserLibraryEntrySerializer,
+    BeyBladeSerializer,
+    BeyRatchetSerializer,
+    BeyBitSerializer,
+    UserBeyBladeSerializer,
+    UserBeyRatchetSerializer,
+    UserBeyBitSerializer,
+    BeybladeBuildSerializer,
+    BeyAssistBladeSerializer,
+    BeyLockChipSerializer,
+    UserBeyAssistBladeSerializer,
+    UserBeyLockChipSerializer,
+    BeybladeReleaseSerializer,
 )
 
 
@@ -2972,6 +2997,8 @@ OPEN_LIBRARY_SEARCH_URL = 'https://openlibrary.org/search.json'
 OPEN_LIBRARY_BASE_URL = 'https://openlibrary.org'
 OPEN_LIBRARY_COVERS_URL = 'https://covers.openlibrary.org/b'
 
+GCD_BASE_URL = 'https://www.comics.org/api'
+
 
 def _open_library_cover_url(cover_id, size='L'):
     if not cover_id:
@@ -2999,6 +3026,16 @@ def _normalize_open_library_item_type(subjects):
     if any(
         term in normalized
         for term in [
+            'manga',
+            'mangas',
+            'japanese comics',
+        ]
+    ):
+        return 'MANGA'
+
+    if any(
+        term in normalized
+        for term in [
             'comic',
             'comics',
             'graphic novel',
@@ -3006,16 +3043,6 @@ def _normalize_open_library_item_type(subjects):
         ]
     ):
         return 'HQ'
-
-    if any(
-        term in normalized
-        for term in [
-            'manga',
-            'mangas',
-            'japanese comics',
-        ]
-    ):
-        return 'MANGA'
 
     return 'LIVRO'
 
@@ -3028,13 +3055,30 @@ def _normalize_open_library_search_doc(doc):
     subjects = doc.get('subject') or []
     publishers = doc.get('publisher') or []
 
+    openlibrary_key = doc.get('key')
+    edition_key = (
+        edition_keys[0]
+        if edition_keys
+        else None
+    )
+
+    source_id = (
+        edition_key
+        or openlibrary_key
+    )
+
     return {
-        'openlibrary_key': doc.get('key'),
-        'edition_key': edition_keys[0] if edition_keys else None,
+        'source': 'OPEN_LIBRARY',
+        'source_id': source_id,
+        'openlibrary_key': openlibrary_key,
+        'edition_key': edition_key,
         'title': doc.get('title') or '',
         'subtitle': doc.get('subtitle'),
+        'series_name': None,
+        'issue_number': None,
         'authors': doc.get('author_name') or [],
         'publishers': publishers[:20],
+        'country': None,
         'first_publish_year': doc.get('first_publish_year'),
         'publication_year': (
             (doc.get('publish_year') or [None])[0]
@@ -3209,7 +3253,10 @@ def _get_open_library_item_detail(openlibrary_key, edition_key=None):
     publish_date = edition_data.get('publish_date')
 
     if publish_date:
-        match = re.search(r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b', str(publish_date))
+        match = re.search(
+            r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b',
+            str(publish_date)
+        )
 
         if match:
             publication_year = safe_int(match.group(1))
@@ -3218,7 +3265,10 @@ def _get_open_library_item_detail(openlibrary_key, edition_key=None):
     first_publish_date = work_data.get('first_publish_date')
 
     if first_publish_date:
-        match = re.search(r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b', str(first_publish_date))
+        match = re.search(
+            r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b',
+            str(first_publish_date)
+        )
 
         if match:
             first_publish_year = safe_int(match.group(1))
@@ -3231,15 +3281,25 @@ def _get_open_library_item_detail(openlibrary_key, edition_key=None):
     if not isinstance(page_count, int):
         page_count = safe_int(page_count)
 
+    source_id = (
+        edition_key
+        or openlibrary_key
+    )
+
     return {
+        'source': 'OPEN_LIBRARY',
+        'source_id': source_id,
         'openlibrary_key': openlibrary_key,
         'edition_key': edition_key,
         'title': title,
         'subtitle': subtitle,
+        'series_name': None,
+        'issue_number': None,
         'item_type': _normalize_open_library_item_type(subjects),
         'description': description,
         'authors': authors,
         'publishers': publishers,
+        'country': None,
         'first_publish_year': first_publish_year,
         'publication_year': publication_year,
         'isbn': isbn,
@@ -3248,6 +3308,613 @@ def _get_open_library_item_detail(openlibrary_key, edition_key=None):
         'languages': languages,
         'page_count': page_count,
     }
+
+
+def _gcd_headers():
+    return {
+        'Accept': 'application/json',
+        'User-Agent': 'GeeksJourney/1.0',
+    }
+
+
+def _request_gcd_json(url_or_path):
+    if not url_or_path:
+        return {
+            'success': False,
+            'status': 400,
+            'error': 'Endereço da GCD não informado.',
+        }
+
+    if str(url_or_path).startswith('http'):
+        url = str(url_or_path)
+    else:
+        path = str(url_or_path)
+
+        if not path.startswith('/'):
+            path = f'/{path}'
+
+        url = f'{GCD_BASE_URL}{path}'
+
+    try:
+        response = requests.get(
+            url,
+            headers=_gcd_headers(),
+            timeout=20,
+        )
+    except requests.RequestException as error:
+        return {
+            'success': False,
+            'status': 503,
+            'error': 'Não foi possível conectar ao Grand Comics Database.',
+            'details': str(error),
+        }
+
+    if response.status_code == 404:
+        return {
+            'success': False,
+            'status': 404,
+            'error': 'Quadrinho não encontrado no Grand Comics Database.',
+        }
+
+    if response.status_code == 429:
+        return {
+            'success': False,
+            'status': 429,
+            'error': 'Limite de consultas do Grand Comics Database atingido.',
+        }
+
+    if not response.ok:
+        return {
+            'success': False,
+            'status': response.status_code,
+            'error': 'Erro ao consultar o Grand Comics Database.',
+            'details': response.text[:1000],
+        }
+
+    try:
+        data = response.json()
+    except ValueError:
+        return {
+            'success': False,
+            'status': 502,
+            'error': 'O Grand Comics Database retornou uma resposta inválida.',
+        }
+
+    return {
+        'success': True,
+        'data': data,
+    }
+
+
+def _gcd_list(data):
+    if isinstance(data, list):
+        return data
+
+    if not isinstance(data, dict):
+        return []
+
+    for key in [
+        'results',
+        'items',
+        'issues',
+        'series',
+    ]:
+        value = data.get(key)
+
+        if isinstance(value, list):
+            return value
+
+    if data:
+        return [data]
+
+    return []
+
+
+def _extract_gcd_id(value):
+    if value in [None, '']:
+        return None
+
+    if isinstance(value, int):
+        return str(value)
+
+    text = str(value)
+
+    match = re.search(
+        r'/issue/(\d+)/?',
+        text
+    )
+
+    if match:
+        return match.group(1)
+
+    if text.isdigit():
+        return text
+
+    return None
+
+
+def _extract_gcd_series_id(value):
+    if value in [None, '']:
+        return None
+
+    if isinstance(value, int):
+        return str(value)
+
+    text = str(value)
+
+    match = re.search(
+        r'/series/(\d+)/?',
+        text
+    )
+
+    if match:
+        return match.group(1)
+
+    if text.isdigit():
+        return text
+
+    return None
+
+
+def _extract_year(value):
+    if value in [None, '']:
+        return None
+
+    match = re.search(
+        r'\b(1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b',
+        str(value)
+    )
+
+    if not match:
+        return None
+
+    return safe_int(match.group(1))
+
+
+def _gcd_publisher_name(series_data):
+    publisher = series_data.get('publisher')
+
+    if not publisher:
+        return None
+
+    if isinstance(publisher, dict):
+        return (
+            publisher.get('name')
+            or publisher.get('publisher_name')
+        )
+
+    if isinstance(publisher, str) and not publisher.startswith('http'):
+        return publisher
+
+    if isinstance(publisher, int):
+        publisher_url = f'{GCD_BASE_URL}/publisher/{publisher}/'
+    else:
+        publisher_url = str(publisher)
+
+    publisher_result = _request_gcd_json(publisher_url)
+
+    if not publisher_result.get('success'):
+        return None
+
+    publisher_data = publisher_result.get('data') or {}
+
+    if isinstance(publisher_data, dict):
+        return (
+            publisher_data.get('name')
+            or publisher_data.get('publisher_name')
+        )
+
+    return None
+
+
+def _get_gcd_series_data(issue_data):
+    series_value = issue_data.get('series')
+
+    if not series_value:
+        return {}
+
+    if isinstance(series_value, dict):
+        return series_value
+
+    if isinstance(series_value, int):
+        series_url = f'{GCD_BASE_URL}/series/{series_value}/'
+    else:
+        series_url = str(series_value)
+
+    series_result = _request_gcd_json(series_url)
+
+    if not series_result.get('success'):
+        return {}
+
+    series_data = series_result.get('data') or {}
+
+    if isinstance(series_data, dict):
+        return series_data
+
+    items = _gcd_list(series_data)
+
+    if items and isinstance(items[0], dict):
+        return items[0]
+
+    return {}
+
+
+def _normalize_gcd_issue(issue_data, fetch_related=True):
+    if not isinstance(issue_data, dict):
+        return None
+
+    source_id = (
+        _extract_gcd_id(issue_data.get('api_url'))
+        or _extract_gcd_id(issue_data.get('url'))
+        or _extract_gcd_id(issue_data.get('id'))
+    )
+
+    series_data = {}
+
+    if fetch_related:
+        series_data = _get_gcd_series_data(issue_data)
+
+    series_name = (
+        issue_data.get('series_name')
+        or series_data.get('name')
+        or ''
+    )
+
+    issue_number = (
+        issue_data.get('number')
+        or issue_data.get('descriptor')
+    )
+
+    subtitle = issue_data.get('title')
+
+    publication_year = (
+        _extract_year(issue_data.get('key_date'))
+        or _extract_year(issue_data.get('publication_date'))
+        or _extract_year(issue_data.get('on_sale_date'))
+    )
+
+    first_publish_year = (
+        safe_int(series_data.get('year_began'))
+        or publication_year
+    )
+
+    country = (
+        series_data.get('country')
+        or None
+    )
+
+    language = (
+        series_data.get('language')
+        or None
+    )
+
+    publishers = []
+    publisher_name = _gcd_publisher_name(series_data) if series_data else None
+
+    if publisher_name:
+        publishers.append(publisher_name)
+
+    isbn = []
+
+    if issue_data.get('isbn'):
+        if isinstance(issue_data.get('isbn'), list):
+            isbn = issue_data.get('isbn')
+        else:
+            isbn = [str(issue_data.get('isbn'))]
+
+    stories = issue_data.get('story_set') or []
+    subjects = []
+    creator_names = []
+    description_parts = []
+
+    for story in stories:
+        if not isinstance(story, dict):
+            continue
+
+        for value in [
+            story.get('feature'),
+            story.get('genre'),
+        ]:
+            if value and value not in subjects:
+                subjects.append(value)
+
+        synopsis = story.get('synopsis')
+
+        if synopsis and synopsis not in description_parts:
+            description_parts.append(synopsis)
+
+        for credit_field in [
+            'script',
+            'pencils',
+            'inks',
+        ]:
+            credit = story.get(credit_field)
+
+            if not credit or credit == 'None':
+                continue
+
+            for name in re.split(r';|,', str(credit)):
+                normalized_name = name.strip()
+
+                if (
+                    normalized_name
+                    and normalized_name not in creator_names
+                ):
+                    creator_names.append(normalized_name)
+
+    description = (
+        '\n\n'.join(description_parts[:3])
+        or issue_data.get('notes')
+        or None
+    )
+
+    cover_url = issue_data.get('cover') or None
+
+    page_count = issue_data.get('page_count')
+
+    if not isinstance(page_count, int):
+        page_count = safe_int(page_count)
+
+    return {
+        'source': 'GCD',
+        'source_id': source_id,
+        'openlibrary_key': None,
+        'edition_key': None,
+        'title': series_name or subtitle or 'Quadrinho sem título',
+        'subtitle': subtitle,
+        'series_name': series_name or None,
+        'issue_number': str(issue_number) if issue_number not in [None, ''] else None,
+        'item_type': 'HQ',
+        'description': description,
+        'authors': creator_names[:30],
+        'publishers': publishers,
+        'country': country,
+        'first_publish_year': first_publish_year,
+        'publication_year': publication_year,
+        'isbn': isbn,
+        'cover_url': cover_url,
+        'subjects': subjects[:40],
+        'languages': [language] if language else [],
+        'page_count': page_count,
+    }
+
+
+def _parse_gcd_search_query(query):
+    query = str(query or '').strip()
+
+    if not query:
+        return '', None
+
+    patterns = [
+        r'^(.*?)\s+#\s*([^\s]+)$',
+        r'^(.*?)\s+#([^\s]+)$',
+        r'^(.*?)\s+(\d+[A-Za-z]?)$',
+    ]
+
+    for pattern in patterns:
+        match = re.match(pattern, query)
+
+        if match:
+            series_name = match.group(1).strip()
+            issue_number = match.group(2).strip()
+
+            if series_name and issue_number:
+                return series_name, issue_number
+
+    return query, None
+
+
+def _request_gcd_search(query, limit=20):
+    series_name, issue_number = _parse_gcd_search_query(query)
+
+    if not series_name:
+        return {
+            'success': False,
+            'status': 400,
+            'error': 'Informe o nome de uma série para pesquisar.',
+        }
+
+    safe_series = requests.utils.quote(
+        series_name,
+        safe=''
+    )
+
+    if issue_number:
+        safe_number = requests.utils.quote(
+            str(issue_number),
+            safe=''
+        )
+
+        path = (
+            f'/series/name/{safe_series}/'
+            f'issue/{safe_number}/'
+        )
+
+        result = _request_gcd_json(path)
+
+        if not result.get('success'):
+            if result.get('status') == 404:
+                return {
+                    'success': True,
+                    'items': [],
+                }
+
+            return result
+
+        raw_items = _gcd_list(result.get('data'))
+        normalized_items = []
+
+        for raw_item in raw_items[:limit]:
+            issue_id = (
+                _extract_gcd_id(raw_item.get('api_url'))
+                or _extract_gcd_id(raw_item.get('id'))
+            )
+
+            detail_data = raw_item
+
+            if issue_id:
+                detail_result = _request_gcd_json(
+                    f'/issue/{issue_id}/'
+                )
+
+                if detail_result.get('success'):
+                    detail_data = detail_result.get('data') or raw_item
+
+            normalized = _normalize_gcd_issue(
+                detail_data,
+                fetch_related=True
+            )
+
+            if normalized:
+                normalized_items.append(normalized)
+
+        return {
+            'success': True,
+            'items': normalized_items,
+        }
+
+    path = f'/series/name/{safe_series}/'
+    result = _request_gcd_json(path)
+
+    if not result.get('success'):
+        if result.get('status') == 404:
+            return {
+                'success': True,
+                'items': [],
+            }
+
+        return result
+
+    raw_series = _gcd_list(result.get('data'))
+    items = []
+
+    for series in raw_series[:limit]:
+        if not isinstance(series, dict):
+            continue
+
+        series_id = (
+            _extract_gcd_series_id(series.get('api_url'))
+            or _extract_gcd_series_id(series.get('url'))
+            or _extract_gcd_series_id(series.get('id'))
+        )
+
+        publisher_name = _gcd_publisher_name(series)
+
+        items.append({
+            'source': 'GCD',
+            'source_id': None,
+            'gcd_series_id': series_id,
+            'openlibrary_key': None,
+            'edition_key': None,
+            'title': series.get('name') or '',
+            'subtitle': None,
+            'series_name': series.get('name') or '',
+            'issue_number': None,
+            'item_type': 'HQ',
+            'description': series.get('notes'),
+            'authors': [],
+            'publishers': [publisher_name] if publisher_name else [],
+            'country': series.get('country'),
+            'first_publish_year': safe_int(series.get('year_began')),
+            'publication_year': None,
+            'isbn': [],
+            'cover_url': None,
+            'subjects': [],
+            'languages': [series.get('language')] if series.get('language') else [],
+            'page_count': None,
+            'requires_issue_number': True,
+        })
+
+    return {
+        'success': True,
+        'items': items,
+    }
+
+
+def _get_gcd_issue_detail(source_id):
+    source_id = _extract_gcd_id(source_id)
+
+    if not source_id:
+        return {
+            'success': False,
+            'status': 400,
+            'error': 'ID da edição do GCD inválido.',
+        }
+
+    result = _request_gcd_json(
+        f'/issue/{source_id}/'
+    )
+
+    if not result.get('success'):
+        return result
+
+    normalized = _normalize_gcd_issue(
+        result.get('data') or {},
+        fetch_related=True
+    )
+
+    if not normalized:
+        return {
+            'success': False,
+            'status': 404,
+            'error': 'Edição não encontrada no Grand Comics Database.',
+        }
+
+    normalized['source_id'] = str(source_id)
+
+    return {
+        'success': True,
+        'item': normalized,
+    }
+
+
+def _save_library_entry(request, catalog_item):
+    entry = (
+        UserLibraryEntry.objects
+        .filter(
+            user=request.user,
+            item=catalog_item
+        )
+        .first()
+    )
+
+    entry_data = {
+        'item_id': catalog_item.id,
+        'owned': request.data.get('owned'),
+        'ownership_type': request.data.get('ownership_type'),
+        'reading_status': request.data.get('reading_status'),
+        'rating': request.data.get('rating'),
+        'acquired_at': request.data.get('acquired_at'),
+        'notes': request.data.get('notes'),
+    }
+
+    entry_data = {
+        key: value
+        for key, value in entry_data.items()
+        if value is not None
+    }
+
+    serializer_context = {
+        'request': request
+    }
+
+    if entry:
+        serializer = UserLibraryEntrySerializer(
+            entry,
+            data=entry_data,
+            partial=True,
+            context=serializer_context
+        )
+    else:
+        serializer = UserLibraryEntrySerializer(
+            data=entry_data,
+            context=serializer_context
+        )
+
+    serializer.is_valid(raise_exception=True)
+    saved_entry = serializer.save()
+
+    return saved_entry, serializer_context
 
 
 class LibraryCatalogViewSet(
@@ -3297,6 +3964,95 @@ class LibraryCatalogViewSet(
 
     @action(
         detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='search-gcd'
+    )
+    def search_gcd(self, request):
+        query = request.query_params.get('q', '').strip()
+
+        if not query:
+            return Response(
+                {
+                    'error': (
+                        'Informe o nome da HQ. '
+                        'Para uma edição específica, use por exemplo: '
+                        'Superaventuras Marvel 104.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = _request_gcd_search(query)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        return Response(result.get('items', []))
+
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated],
+        url_path='search'
+    )
+    def search_all_sources(self, request):
+        query = request.query_params.get('q', '').strip()
+
+        if not query:
+            return Response(
+                {
+                    'error': 'Informe algo para pesquisar.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        open_library_result = _request_open_library_search(
+            query,
+            limit=20
+        )
+
+        gcd_result = _request_gcd_search(
+            query,
+            limit=20
+        )
+
+        items = []
+        errors = []
+
+        if open_library_result.get('success'):
+            items.extend(
+                open_library_result.get('items', [])
+            )
+        else:
+            errors.append({
+                'source': 'OPEN_LIBRARY',
+                'error': open_library_result.get('error'),
+            })
+
+        if gcd_result.get('success'):
+            items.extend(
+                gcd_result.get('items', [])
+            )
+        else:
+            errors.append({
+                'source': 'GCD',
+                'error': gcd_result.get('error'),
+            })
+
+        return Response({
+            'items': items,
+            'errors': errors,
+        })
+
+    @action(
+        detail=False,
         methods=['post'],
         permission_classes=[IsAuthenticated],
         url_path='import-open-library'
@@ -3327,6 +4083,14 @@ class LibraryCatalogViewSet(
         if item_type:
             detail['item_type'] = item_type
 
+        source_id = (
+            edition_key
+            or openlibrary_key
+        )
+
+        detail['source'] = 'OPEN_LIBRARY'
+        detail['source_id'] = source_id
+
         catalog_item, created = (
             LibraryCatalog.objects.update_or_create(
                 openlibrary_key=openlibrary_key,
@@ -3335,54 +4099,86 @@ class LibraryCatalogViewSet(
             )
         )
 
-        entry = (
-            UserLibraryEntry.objects
-            .filter(
-                user=request.user,
-                item=catalog_item
-            )
-            .first()
+        saved_entry, serializer_context = _save_library_entry(
+            request,
+            catalog_item
         )
-
-        entry_data = {
-            'item_id': catalog_item.id,
-            'owned': request.data.get('owned', False),
-            'ownership_type': request.data.get('ownership_type'),
-            'reading_status': request.data.get('reading_status'),
-            'rating': request.data.get('rating'),
-            'acquired_at': request.data.get('acquired_at'),
-            'notes': request.data.get('notes'),
-        }
-
-        entry_data = {
-            key: value
-            for key, value in entry_data.items()
-            if value is not None
-        }
-
-        serializer_context = {
-            'request': request
-        }
-
-        if entry:
-            serializer = UserLibraryEntrySerializer(
-                entry,
-                data=entry_data,
-                partial=True,
-                context=serializer_context
-            )
-        else:
-            serializer = UserLibraryEntrySerializer(
-                data=entry_data,
-                context=serializer_context
-            )
-
-        serializer.is_valid(raise_exception=True)
-        saved_entry = serializer.save()
 
         return Response(
             {
                 'message': f'{catalog_item.title} salvo com sucesso.',
+                'catalog_item': LibraryCatalogSerializer(
+                    catalog_item,
+                    context=serializer_context
+                ).data,
+                'entry': UserLibraryEntrySerializer(
+                    saved_entry,
+                    context=serializer_context
+                ).data,
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if created
+                else status.HTTP_200_OK
+            )
+        )
+
+    @action(
+        detail=False,
+        methods=['post'],
+        permission_classes=[IsAuthenticated],
+        url_path='import-gcd'
+    )
+    def import_gcd(self, request):
+        source_id = (
+            request.data.get('source_id')
+            or request.data.get('gcd_id')
+        )
+
+        if not source_id:
+            return Response(
+                {
+                    'error': 'source_id ou gcd_id é obrigatório.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        result = _get_gcd_issue_detail(source_id)
+
+        if not result.get('success'):
+            return Response(
+                {
+                    'error': result.get('error'),
+                    'details': result.get('details'),
+                },
+                status=result.get('status', 503)
+            )
+
+        detail = result['item']
+
+        item_type = request.data.get('item_type')
+
+        if item_type:
+            detail['item_type'] = item_type
+
+        normalized_source_id = str(detail['source_id'])
+
+        catalog_item, created = (
+            LibraryCatalog.objects.update_or_create(
+                source='GCD',
+                source_id=normalized_source_id,
+                defaults=detail
+            )
+        )
+
+        saved_entry, serializer_context = _save_library_entry(
+            request,
+            catalog_item
+        )
+
+        return Response(
+            {
+                'message': f'{catalog_item} salvo com sucesso.',
                 'catalog_item': LibraryCatalogSerializer(
                     catalog_item,
                     context=serializer_context
@@ -3476,3 +4272,787 @@ class UserLibraryEntryViewSet(
             raise PermissionDenied('Não autorizado.')
 
         instance.delete()
+
+class BeyBladeViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = BeyBladeSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeyBlade.objects
+            .all()
+            .order_by('name')
+        )
+
+        query = (
+            self.request.query_params
+            .get(
+                'q',
+                ''
+            )
+            .strip()
+        )
+
+        bey_type = (
+            self.request.query_params
+            .get(
+                'type'
+            )
+        )
+
+        spin = (
+            self.request.query_params
+            .get(
+                'spin'
+            )
+        )
+
+        if query:
+            queryset = queryset.filter(
+                name__icontains=query
+            )
+
+        if bey_type:
+            queryset = queryset.filter(
+                bey_type__iexact=bey_type
+            )
+
+        if spin:
+            queryset = queryset.filter(
+                spin__iexact=spin
+            )
+
+        return queryset
+
+
+class BeyRatchetViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = BeyRatchetSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeyRatchet.objects
+            .all()
+            .order_by('name')
+        )
+
+        query = (
+            self.request.query_params
+            .get(
+                'q',
+                ''
+            )
+            .strip()
+        )
+
+        height = (
+            self.request.query_params
+            .get(
+                'height'
+            )
+        )
+
+        protrusions = (
+            self.request.query_params
+            .get(
+                'protrusions'
+            )
+        )
+
+        if query:
+            queryset = queryset.filter(
+                name__icontains=query
+            )
+
+        if height:
+            queryset = queryset.filter(
+                height=height
+            )
+
+        if protrusions:
+            queryset = queryset.filter(
+                protrusions=protrusions
+            )
+
+        return queryset
+
+
+class BeyBitViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = BeyBitSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeyBit.objects
+            .all()
+            .order_by('name')
+        )
+
+        query = (
+            self.request.query_params
+            .get(
+                'q',
+                ''
+            )
+            .strip()
+        )
+
+        bit_type = (
+            self.request.query_params
+            .get(
+                'type'
+            )
+        )
+
+        if query:
+            queryset = queryset.filter(
+                name__icontains=query
+            )
+
+        if bit_type:
+            queryset = queryset.filter(
+                bit_type__iexact=bit_type
+            )
+
+        return queryset
+
+
+class UserBeyBladeViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = UserBeyBladeSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            UserBeyBlade.objects
+            .select_related(
+                'user',
+                'blade'
+            )
+        )
+
+        target_username = (
+            self.request.query_params
+            .get(
+                'username'
+            )
+        )
+
+        if target_username:
+            queryset = queryset.filter(
+                user__username=target_username
+            )
+
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
+            )
+
+        else:
+            return UserBeyBlade.objects.none()
+
+        return queryset.order_by(
+            'blade__name'
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_update(
+        self,
+        serializer
+    ):
+        if (
+            serializer.instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_destroy(
+        self,
+        instance
+    ):
+        if (
+            instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        instance.delete()
+
+
+class UserBeyRatchetViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = UserBeyRatchetSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            UserBeyRatchet.objects
+            .select_related(
+                'user',
+                'ratchet'
+            )
+        )
+
+        target_username = (
+            self.request.query_params
+            .get(
+                'username'
+            )
+        )
+
+        if target_username:
+            queryset = queryset.filter(
+                user__username=target_username
+            )
+
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
+            )
+
+        else:
+            return UserBeyRatchet.objects.none()
+
+        return queryset.order_by(
+            'ratchet__name'
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_update(
+        self,
+        serializer
+    ):
+        if (
+            serializer.instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_destroy(
+        self,
+        instance
+    ):
+        if (
+            instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        instance.delete()
+
+
+class UserBeyBitViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = UserBeyBitSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            UserBeyBit.objects
+            .select_related(
+                'user',
+                'bit'
+            )
+        )
+
+        target_username = (
+            self.request.query_params
+            .get(
+                'username'
+            )
+        )
+
+        if target_username:
+            queryset = queryset.filter(
+                user__username=target_username
+            )
+
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
+            )
+
+        else:
+            return UserBeyBit.objects.none()
+
+        return queryset.order_by(
+            'bit__name'
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_update(
+        self,
+        serializer
+    ):
+        if (
+            serializer.instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_destroy(
+        self,
+        instance
+    ):
+        if (
+            instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        instance.delete()
+
+
+class BeybladeBuildViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = BeybladeBuildSerializer
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeybladeBuild.objects
+            .select_related(
+                'user',
+                'blade',
+                'ratchet',
+                'bit',
+                'assist_blade',
+                'lock_chip'
+            )
+        )
+
+        target_username = (
+            self.request.query_params
+            .get(
+                'username'
+            )
+        )
+
+        favorite = (
+            self.request.query_params
+            .get(
+                'favorite'
+            )
+        )
+
+        bey_type = (
+            self.request.query_params
+            .get(
+                'type'
+            )
+        )
+
+        if target_username:
+            queryset = queryset.filter(
+                user__username=target_username
+            )
+
+        elif self.request.user.is_authenticated:
+            queryset = queryset.filter(
+                user=self.request.user
+            )
+
+        else:
+            return BeybladeBuild.objects.none()
+
+        if favorite is not None:
+            favorite_value = (
+                str(favorite)
+                .lower()
+                in [
+                    '1',
+                    'true',
+                    'yes',
+                    'sim',
+                ]
+            )
+
+            queryset = queryset.filter(
+                favorite=favorite_value
+            )
+
+        if bey_type:
+            queryset = queryset.filter(
+                blade__bey_type__iexact=bey_type
+            )
+
+        return queryset.order_by(
+            '-favorite',
+            'blade__name',
+            'ratchet__name',
+            'bit__name'
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_update(
+        self,
+        serializer
+    ):
+        if (
+            serializer.instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        serializer.save(
+            user=self.request.user
+        )
+
+    def perform_destroy(
+        self,
+        instance
+    ):
+        if (
+            instance.user
+            != self.request.user
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied(
+                'Não autorizado.'
+            )
+
+        instance.delete()
+class BeyAssistBladeViewSet(
+    viewsets.ModelViewSet
+):
+    queryset = (
+        BeyAssistBlade.objects.all()
+    )
+
+    serializer_class = (
+        BeyAssistBladeSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeyAssistBlade.objects.all()
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search'
+            )
+        )
+
+        if search:
+            queryset = queryset.filter(
+                name__icontains=search
+            )
+
+        return queryset
+
+
+class BeyLockChipViewSet(
+    viewsets.ModelViewSet
+):
+    queryset = (
+        BeyLockChip.objects.all()
+    )
+
+    serializer_class = (
+        BeyLockChipSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeyLockChip.objects.all()
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search'
+            )
+        )
+
+        if search:
+            queryset = queryset.filter(
+                name__icontains=search
+            )
+
+        return queryset
+
+
+class UserBeyAssistBladeViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = (
+        UserBeyAssistBladeSerializer
+    )
+
+    pagination_class = None
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get_queryset(self):
+        return (
+            UserBeyAssistBlade.objects
+            .filter(
+                user=self.request.user
+            )
+            .select_related(
+                'assist_blade'
+            )
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+
+class UserBeyLockChipViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = (
+        UserBeyLockChipSerializer
+    )
+
+    pagination_class = None
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def get_queryset(self):
+        return (
+            UserBeyLockChip.objects
+            .filter(
+                user=self.request.user
+            )
+            .select_related(
+                'lock_chip'
+            )
+        )
+
+    def perform_create(
+        self,
+        serializer
+    ):
+        serializer.save(
+            user=self.request.user
+        )
+
+
+class BeybladeReleaseViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = (
+        BeybladeReleaseSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticatedOrReadOnly
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            BeybladeRelease.objects
+            .select_related(
+                'blade',
+                'ratchet',
+                'bit',
+                'assist_blade',
+                'lock_chip',
+            )
+            .all()
+            .order_by(
+                'code'
+            )
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search',
+                ''
+            )
+            .strip()
+        )
+
+        system = (
+            self.request
+            .query_params
+            .get(
+                'system'
+            )
+        )
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(
+                    name__icontains=search
+                )
+                |
+                models.Q(
+                    code__icontains=search
+                )
+                |
+                models.Q(
+                    blade__name__icontains=search
+                )
+                |
+                models.Q(
+                    ratchet__name__icontains=search
+                )
+                |
+                models.Q(
+                    bit__name__icontains=search
+                )
+                |
+                models.Q(
+                    bit__abbreviation__icontains=search
+                )
+                |
+                models.Q(
+                    assist_blade__name__icontains=search
+                )
+                |
+                models.Q(
+                    lock_chip__name__icontains=search
+                )
+            )
+
+        if system:
+            queryset = queryset.filter(
+                system__iexact=system
+            )
+
+        return queryset

@@ -56,7 +56,9 @@ function BoardGamePage() {
 
       try {
         const response =
-          await api.get('boardgames/');
+          await api.get(
+            'user-boardgames/'
+          );
 
         const data =
           response.data.results ||
@@ -84,30 +86,108 @@ function BoardGamePage() {
 
   const normalizedGames =
     useMemo(() => {
-      return boardGames.map((game) => {
-        const owned =
-          game.owned ??
-          game.is_owned ??
-          game.in_collection ??
-          true;
+      return boardGames
+        .map((entry) => {
+          const catalogGame =
+            entry.game || null;
 
-        const played =
-          game.played ??
-          game.has_played ??
-          true;
+          if (!catalogGame) {
+            return null;
+          }
 
-        const rating =
-          game.rating ??
-          game.user_rating ??
-          null;
+          return {
+            id:
+              catalogGame.id,
 
-        return {
-          ...game,
-          owned,
-          played,
-          rating,
-        };
-      });
+            entryId:
+              entry.id,
+
+            bggId:
+              catalogGame.bgg_id,
+
+            name:
+              catalogGame.name,
+
+            originalName:
+              catalogGame.original_name,
+
+            description:
+              catalogGame.description,
+
+            coverImage:
+              catalogGame.cover_image,
+
+            coverUrl:
+              catalogGame.cover_url,
+
+            thumbnailUrl:
+              catalogGame.thumbnail_url,
+
+            year:
+              catalogGame.year,
+
+            minPlayers:
+              catalogGame.min_players,
+
+            maxPlayers:
+              catalogGame.max_players,
+
+            minPlayTime:
+              catalogGame.min_play_time,
+
+            maxPlayTime:
+              catalogGame.max_play_time,
+
+            playTime:
+              catalogGame.play_time,
+
+            minAge:
+              catalogGame.min_age,
+
+            publisher:
+              catalogGame.publisher,
+
+            publishers:
+              catalogGame.publishers || [],
+
+            categories:
+              catalogGame.categories || [],
+
+            mechanics:
+              catalogGame.mechanics || [],
+
+            designers:
+              catalogGame.designers || [],
+
+            artists:
+              catalogGame.artists || [],
+
+            bggRating:
+              catalogGame.bgg_rating,
+
+            bggWeight:
+              catalogGame.bgg_weight,
+
+            owned:
+              Boolean(entry.owned),
+
+            played:
+              Boolean(entry.played),
+
+            rating:
+              entry.rating !== null &&
+              entry.rating !== undefined
+                ? Number(entry.rating)
+                : null,
+
+            acquiredAt:
+              entry.acquired_at,
+
+            notes:
+              entry.notes,
+          };
+        })
+        .filter(Boolean);
     }, [boardGames]);
 
   const filteredGames =
@@ -152,10 +232,14 @@ function BoardGamePage() {
           });
       }
 
-      if (activeFilter === 'owned') {
+      if (
+        activeFilter ===
+        'owned'
+      ) {
         result =
           result.filter(
-            (game) => game.owned
+            (game) =>
+              game.owned
           );
       }
 
@@ -187,7 +271,10 @@ function BoardGamePage() {
           );
         }
 
-        if (sortBy === 'rating') {
+        if (
+          sortBy ===
+          'rating'
+        ) {
           return (
             (b.rating || 0) -
             (a.rating || 0)
@@ -208,7 +295,8 @@ function BoardGamePage() {
   const ownedGames =
     useMemo(() => {
       return filteredGames.filter(
-        (game) => game.owned
+        (game) =>
+          game.owned
       );
     }, [filteredGames]);
 
@@ -223,12 +311,14 @@ function BoardGamePage() {
 
   const totalOwned =
     normalizedGames.filter(
-      (game) => game.owned
+      (game) =>
+        game.owned
     ).length;
 
   const totalPlayed =
     normalizedGames.filter(
-      (game) => game.played
+      (game) =>
+        game.played
     ).length;
 
   const ratedGames =
@@ -258,14 +348,15 @@ function BoardGamePage() {
   ) => {
     const cover =
       getImageUrl(
-        game.cover_image ||
-        game.image_url
+        game.coverImage ||
+        game.coverUrl ||
+        game.thumbnailUrl
       );
 
     return (
       <Link
         to={`/boardgames/${game.id}`}
-        key={game.id}
+        key={game.entryId}
         className={
           styles.gameCard
         }
@@ -300,11 +391,13 @@ function BoardGamePage() {
                 <PackageCheck
                   size={14}
                 />
+
                 Na coleção
               </>
             ) : (
               <>
                 <Eye size={14} />
+
                 Já joguei
               </>
             )}
@@ -339,26 +432,30 @@ function BoardGamePage() {
                 <CalendarDays
                   size={14}
                 />
+
                 {game.year}
               </span>
             )}
 
-            {game.min_players && (
+            {game.minPlayers && (
               <span>
                 <Users size={14} />
-                {game.min_players}
-                {game.max_players &&
-                game.max_players !==
-                  game.min_players
-                  ? `–${game.max_players}`
+
+                {game.minPlayers}
+
+                {game.maxPlayers &&
+                game.maxPlayers !==
+                  game.minPlayers
+                  ? `–${game.maxPlayers}`
                   : ''}
               </span>
             )}
 
-            {game.play_time && (
+            {game.playTime && (
               <span>
                 <Clock3 size={14} />
-                {game.play_time}
+
+                {game.playTime}
               </span>
             )}
           </div>
@@ -381,7 +478,9 @@ function BoardGamePage() {
                 : '—'}
             </strong>
 
-            <span>/ 10</span>
+            <span>
+              / 10
+            </span>
           </div>
         </div>
       </Link>
@@ -389,7 +488,11 @@ function BoardGamePage() {
   };
 
   return (
-    <div className={styles.boardGamesTheme}>
+    <div
+      className={
+        styles.boardGamesTheme
+      }
+    >
       <Navbar />
 
       <main
@@ -419,11 +522,13 @@ function BoardGamePage() {
               }
             >
               <Dice5 size={17} />
+
               BOARD GAME COLLECTION
             </div>
 
             <h1>
               Minha coleção de
+
               <span>
                 jogos de tabuleiro.
               </span>

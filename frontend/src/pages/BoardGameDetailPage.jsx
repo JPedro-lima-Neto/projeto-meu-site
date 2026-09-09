@@ -3,13 +3,17 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+
 import {
   useParams,
   Link,
 } from 'react-router-dom';
+
 import api from '../services/api';
+
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+
 import {
   ArrowLeft,
   Dice5,
@@ -24,8 +28,13 @@ import {
   BookOpen,
   Puzzle,
   Tags,
+  Paintbrush,
+  PenTool,
+  Gauge,
 } from 'lucide-react';
+
 import './BoardGameDetailPage.css';
+
 
 function BoardGameDetailPage() {
   const { id } = useParams();
@@ -33,11 +42,15 @@ function BoardGameDetailPage() {
   const [game, setGame] =
     useState(null);
 
+  const [userGame, setUserGame] =
+    useState(null);
+
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState(false);
+
 
   const getImageUrl = (
     imagePath
@@ -57,6 +70,7 @@ function BoardGameDetailPage() {
     return `http://127.0.0.1:8000${imagePath}`;
   };
 
+
   useEffect(() => {
     const fetchGame =
       async () => {
@@ -64,14 +78,51 @@ function BoardGameDetailPage() {
         setError(false);
 
         try {
-          const response =
-            await api.get(
-              `boardgames/${id}/`
-            );
+          const [
+            catalogResponse,
+            userGamesResponse,
+          ] = await Promise.all([
+            api.get(
+              `boardgame-catalog/${id}/`
+            ),
+
+            api.get(
+              'user-boardgames/'
+            ),
+          ]);
+
+          const catalogGame =
+            catalogResponse.data;
+
+          const userGamesData =
+            userGamesResponse
+              .data
+              .results ||
+            userGamesResponse.data;
+
+          const entries =
+            Array.isArray(
+              userGamesData
+            )
+              ? userGamesData
+              : [];
+
+          const matchingEntry =
+            entries.find(
+              (entry) =>
+                Number(
+                  entry.game?.id
+                ) === Number(id)
+            ) || null;
 
           setGame(
-            response.data
+            catalogGame
           );
+
+          setUserGame(
+            matchingEntry
+          );
+
         } catch (requestError) {
           console.error(
             'Erro ao buscar detalhes do jogo:',
@@ -80,13 +131,17 @@ function BoardGameDetailPage() {
 
           setError(true);
           setGame(null);
+          setUserGame(null);
+
         } finally {
           setLoading(false);
         }
       };
 
     fetchGame();
+
   }, [id]);
+
 
   const gameCover =
     useMemo(() => {
@@ -96,73 +151,64 @@ function BoardGameDetailPage() {
 
       return getImageUrl(
         game.cover_image ||
-        game.image_url
+        game.cover_url ||
+        game.thumbnail_url
       );
     }, [game]);
+
 
   const rating =
-    useMemo(() => {
-      if (!game) {
-        return null;
-      }
+    userGame?.rating ??
+    null;
 
-      return (
-        game.rating ??
-        game.user_rating ??
-        null
-      );
-    }, [game]);
 
   const owned =
-    useMemo(() => {
-      if (!game) {
-        return false;
-      }
+    Boolean(
+      userGame?.owned
+    );
 
-      return (
-        game.owned ??
-        game.is_owned ??
-        game.in_collection ??
-        true
-      );
-    }, [game]);
 
   const played =
-    useMemo(() => {
-      if (!game) {
-        return false;
-      }
+    Boolean(
+      userGame?.played
+    );
 
-      return (
-        game.played ??
-        game.has_played ??
-        true
-      );
-    }, [game]);
 
   const minPlayers =
-    game?.min_players ?? null;
+    game?.min_players ??
+    null;
+
 
   const maxPlayers =
-    game?.max_players ?? null;
+    game?.max_players ??
+    null;
+
 
   const playerText =
     minPlayers &&
     maxPlayers
-      ? minPlayers ===
-        maxPlayers
-        ? `${minPlayers} jogadores`
-        : `${minPlayers}–${maxPlayers} jogadores`
+      ? (
+          minPlayers ===
+          maxPlayers
+            ? `${minPlayers} jogadores`
+            : `${minPlayers}–${maxPlayers} jogadores`
+        )
       : minPlayers
         ? `${minPlayers}+ jogadores`
         : 'Não informado';
+
 
   const playTime =
     game?.play_time ||
     (
       game?.min_play_time &&
       game?.max_play_time
-        ? `${game.min_play_time}–${game.max_play_time} min`
+        ? (
+            game.min_play_time ===
+            game.max_play_time
+              ? `${game.min_play_time} min`
+              : `${game.min_play_time}–${game.max_play_time} min`
+          )
         : game?.min_play_time
           ? `${game.min_play_time} min`
           : game?.max_play_time
@@ -170,26 +216,63 @@ function BoardGameDetailPage() {
             : 'Não informado'
     );
 
+
   const age =
-    game?.age ||
-    (
-      game?.min_age
-        ? `${game.min_age}+`
-        : 'Não informado'
-    );
+    game?.min_age
+      ? `${game.min_age}+`
+      : 'Não informado';
+
 
   const categories =
-    game?.categories ||
-    game?.category ||
-    null;
+    Array.isArray(
+      game?.categories
+    )
+      ? game.categories
+      : [];
+
 
   const mechanics =
-    game?.mechanics ||
-    null;
+    Array.isArray(
+      game?.mechanics
+    )
+      ? game.mechanics
+      : [];
+
+
+  const designers =
+    Array.isArray(
+      game?.designers
+    )
+      ? game.designers
+      : [];
+
+
+  const artists =
+    Array.isArray(
+      game?.artists
+    )
+      ? game.artists
+      : [];
+
+
+  const formatList = (
+    items
+  ) => {
+    if (
+      !items ||
+      items.length === 0
+    ) {
+      return 'Não informado';
+    }
+
+    return items.join(', ');
+  };
+
 
   if (loading) {
     return (
-      <>
+      <div className="boardgame-detail-theme">
+
         <Navbar />
 
         <main className="boardgame-detail-page">
@@ -208,16 +291,19 @@ function BoardGameDetailPage() {
         </main>
 
         <Footer />
-      </>
+
+      </div>
     );
   }
+
 
   if (
     error ||
     !game
   ) {
     return (
-      <>
+      <div className="boardgame-detail-theme">
+
         <Navbar />
 
         <main className="boardgame-detail-page">
@@ -249,12 +335,15 @@ function BoardGameDetailPage() {
         </main>
 
         <Footer />
-      </>
+
+      </div>
     );
   }
 
+
   return (
-    <>
+    <div className="boardgame-detail-theme">
+
       <Navbar />
 
       <main className="boardgame-detail-page">
@@ -280,6 +369,7 @@ function BoardGameDetailPage() {
               Voltar para a coleção
             </span>
           </Link>
+
 
           <section className="boardgame-hero">
 
@@ -314,6 +404,7 @@ function BoardGameDetailPage() {
 
             </div>
 
+
             <div className="boardgame-main-info">
 
               <div className="boardgame-eyebrow">
@@ -330,9 +421,10 @@ function BoardGameDetailPage() {
                 {game.name}
               </h1>
 
+
               <div className="boardgame-status-row">
 
-                {owned ? (
+                {owned && (
                   <div className="boardgame-status boardgame-status-owned">
 
                     <PackageCheck
@@ -342,17 +434,21 @@ function BoardGameDetailPage() {
                     Na coleção
 
                   </div>
-                ) : played ? (
-                  <div className="boardgame-status boardgame-status-played">
+                )}
 
-                    <Eye
-                      size={16}
-                    />
+                {!owned &&
+                  played && (
+                    <div className="boardgame-status boardgame-status-played">
 
-                    Já joguei
+                      <Eye
+                        size={16}
+                      />
 
-                  </div>
-                ) : null}
+                      Já joguei
+
+                    </div>
+                  )}
+
 
                 <div className="boardgame-rating">
 
@@ -367,9 +463,7 @@ function BoardGameDetailPage() {
                       undefined
                       ? Number(
                           rating
-                        ).toFixed(
-                          1
-                        )
+                        ).toFixed(1)
                       : '—'}
                   </strong>
 
@@ -381,12 +475,6 @@ function BoardGameDetailPage() {
 
               </div>
 
-              <p className="boardgame-description">
-
-                {game.description ||
-                  'Sem descrição cadastrada para este jogo.'}
-
-              </p>
 
               <div className="boardgame-meta-grid">
 
@@ -414,6 +502,7 @@ function BoardGameDetailPage() {
 
                 </article>
 
+
                 <article className="boardgame-meta-card">
 
                   <div className="boardgame-meta-icon">
@@ -437,6 +526,7 @@ function BoardGameDetailPage() {
                   </div>
 
                 </article>
+
 
                 <article className="boardgame-meta-card">
 
@@ -463,6 +553,7 @@ function BoardGameDetailPage() {
 
                 </article>
 
+
                 <article className="boardgame-meta-card">
 
                   <div className="boardgame-meta-icon">
@@ -488,6 +579,7 @@ function BoardGameDetailPage() {
 
                 </article>
 
+
                 <article className="boardgame-meta-card">
 
                   <div className="boardgame-meta-icon">
@@ -512,93 +604,211 @@ function BoardGameDetailPage() {
 
                 </article>
 
+
+                <article className="boardgame-meta-card">
+
+                  <div className="boardgame-meta-icon">
+
+                    <Gauge
+                      size={20}
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <span>
+                      Complexidade BGG
+                    </span>
+
+                    <strong>
+                      {game.bgg_weight
+                        ? `${Number(
+                            game.bgg_weight
+                          ).toFixed(2)} / 5`
+                        : 'Não informado'}
+                    </strong>
+
+                  </div>
+
+                </article>
+
               </div>
 
             </div>
 
           </section>
 
-          {(categories ||
-            mechanics) && (
-            <section className="boardgame-extra-section">
 
-              <div className="boardgame-section-heading">
+          <section className="boardgame-description-section">
+
+            <div className="boardgame-section-heading">
+
+              <div>
+
+                <span>
+                  VISÃO GERAL
+                </span>
+
+                <h2>
+                  Descrição
+                </h2>
+
+              </div>
+
+              <div className="boardgame-heading-line">
+              </div>
+
+            </div>
+
+
+            <div className="boardgame-description-card">
+
+              <p>
+                {game.description ||
+                  'Sem descrição cadastrada para este jogo.'}
+              </p>
+
+            </div>
+
+          </section>
+
+
+          <section className="boardgame-extra-section">
+
+            <div className="boardgame-section-heading">
+
+              <div>
+
+                <span>
+                  DETALHES
+                </span>
+
+                <h2>
+                  Sobre o jogo
+                </h2>
+
+              </div>
+
+              <div className="boardgame-heading-line">
+              </div>
+
+            </div>
+
+
+            <div className="boardgame-extra-grid">
+
+              <article className="boardgame-extra-card">
+
+                <div className="boardgame-extra-icon">
+
+                  <Tags
+                    size={22}
+                  />
+
+                </div>
 
                 <div>
 
                   <span>
-                    DETALHES
+                    Categorias
                   </span>
 
-                  <h2>
-                    Como esse jogo funciona
-                  </h2>
+                  <p>
+                    {formatList(
+                      categories
+                    )}
+                  </p>
 
                 </div>
 
-                <div className="boardgame-heading-line">
+              </article>
+
+
+              <article className="boardgame-extra-card">
+
+                <div className="boardgame-extra-icon">
+
+                  <Puzzle
+                    size={22}
+                  />
+
                 </div>
 
-              </div>
+                <div>
 
-              <div className="boardgame-extra-grid">
+                  <span>
+                    Mecânicas
+                  </span>
 
-                {categories && (
-                  <article className="boardgame-extra-card">
+                  <p>
+                    {formatList(
+                      mechanics
+                    )}
+                  </p>
 
-                    <div className="boardgame-extra-icon">
+                </div>
 
-                      <Tags
-                        size={22}
-                      />
+              </article>
 
-                    </div>
 
-                    <div>
+              <article className="boardgame-extra-card">
 
-                      <span>
-                        Categorias
-                      </span>
+                <div className="boardgame-extra-icon">
 
-                      <p>
-                        {categories}
-                      </p>
+                  <PenTool
+                    size={22}
+                  />
 
-                    </div>
+                </div>
 
-                  </article>
-                )}
+                <div>
 
-                {mechanics && (
-                  <article className="boardgame-extra-card">
+                  <span>
+                    Designers
+                  </span>
 
-                    <div className="boardgame-extra-icon">
+                  <p>
+                    {formatList(
+                      designers
+                    )}
+                  </p>
 
-                      <Puzzle
-                        size={22}
-                      />
+                </div>
 
-                    </div>
+              </article>
 
-                    <div>
 
-                      <span>
-                        Mecânicas
-                      </span>
+              <article className="boardgame-extra-card">
 
-                      <p>
-                        {mechanics}
-                      </p>
+                <div className="boardgame-extra-icon">
 
-                    </div>
+                  <Paintbrush
+                    size={22}
+                  />
 
-                  </article>
-                )}
+                </div>
 
-              </div>
+                <div>
 
-            </section>
-          )}
+                  <span>
+                    Artistas
+                  </span>
+
+                  <p>
+                    {formatList(
+                      artists
+                    )}
+                  </p>
+
+                </div>
+
+              </article>
+
+            </div>
+
+          </section>
+
 
           <section className="boardgame-rules-section">
 
@@ -620,6 +830,7 @@ function BoardGameDetailPage() {
               </div>
 
             </div>
+
 
             <div className="boardgame-rules-card">
 
@@ -655,7 +866,8 @@ function BoardGameDetailPage() {
       </main>
 
       <Footer />
-    </>
+
+    </div>
   );
 }
 

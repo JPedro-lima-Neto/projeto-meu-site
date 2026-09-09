@@ -1,16 +1,48 @@
 .main-footer {
-    background: var(--footer-bg, #020617);
+    position: relative;
+
+    z-index: 200;
+
+    width: 100%;
+
+    margin-top: 0;
+
+    isolation: isolate;
+
+    overflow: hidden;
+
+    background:
+        var(
+            --footer-bg,
+            #020617
+        );
 
     border-top:
         1px solid
         var(
             --footer-border,
-            rgba(255, 255, 255, 0.08)
+            rgba(
+                255,
+                255,
+                255,
+                0.08
+            )
         );
 
-    margin-top: 0;
+    color:
+        var(
+            --footer-text,
+            #cbd5f5
+        );
 
-    color: var(--footer-text, #cbd5f5);
+    box-shadow:
+        0 -18px 50px
+        rgba(
+            0,
+            0,
+            0,
+            0.22
+        );
 
     transition:
         background-color 0.4s ease,
@@ -18,29 +50,79 @@
         border-color 0.4s ease;
 }
 
-/* CONTAINER */
+
+.main-footer::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: -1;
+
+    pointer-events: none;
+
+    background:
+        radial-gradient(
+            circle at 18% 20%,
+            var(
+                --footer-glow-one,
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.025
+                )
+            ),
+            transparent 36%
+        ),
+        radial-gradient(
+            circle at 82% 72%,
+            var(
+                --footer-glow-two,
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.018
+                )
+            ),
+            transparent 40%
+        );
+}
+
 
 .footer-container {
+    position: relative;
+
+    z-index: 2;
+
     display: grid;
 
     grid-template-columns:
         repeat(
             auto-fit,
-            minmax(200px, 1fr)
+            minmax(
+                200px,
+                1fr
+            )
         );
 
     gap: 30px;
 
-    padding: 50px 40px;
-
     max-width: 1200px;
 
     margin: 0 auto;
+
+    padding:
+        50px 40px;
 }
 
-/* BRAND */
 
 .footer-brand h2 {
+    margin:
+        0 0 10px;
+
     font-family:
         'Orbitron',
         sans-serif;
@@ -51,36 +133,52 @@
             #ffffff
         );
 
-    margin-bottom: 10px;
+    font-size: 1.35rem;
+
+    letter-spacing: 1px;
 }
 
+
 .footer-brand p {
-    font-size: 0.9rem;
+    max-width: 280px;
+
+    margin: 0;
 
     color:
         var(
             --footer-muted,
             #94a3b8
         );
+
+    font-size: 0.9rem;
+
+    line-height: 1.6;
 }
 
-/* LINKS */
 
 .footer-links h4,
 .footer-social h4 {
+    margin:
+        0 0 12px;
+
     color:
         var(
             --footer-heading,
             #ffffff
         );
 
-    margin-bottom: 10px;
+    font-size: 0.95rem;
+
+    font-weight: 800;
 }
+
 
 .footer-links a {
     display: block;
 
-    text-decoration: none;
+    width: fit-content;
+
+    margin-bottom: 8px;
 
     color:
         var(
@@ -88,14 +186,15 @@
             #94a3b8
         );
 
-    margin-bottom: 6px;
-
     font-size: 0.9rem;
+
+    text-decoration: none;
 
     transition:
         color 0.2s ease,
         transform 0.2s ease;
 }
+
 
 .footer-links a:hover {
     color:
@@ -105,20 +204,30 @@
         );
 
     transform:
-        translateX(4px);
+        translateX(
+            4px
+        );
 }
 
-/* SOCIAL */
 
 .footer-social .social-icons {
     display: flex;
 
+    align-items: center;
+
     gap: 15px;
 
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
+
 .footer-social a {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
     color:
         var(
             --footer-text,
@@ -127,76 +236,142 @@
 
     transition:
         color 0.3s ease,
-        text-shadow 0.3s ease;
+        text-shadow 0.3s ease,
+        transform 0.2s ease;
 }
 
-/* RGB HOVER */
+
+.footer-social a:hover {
+    transform:
+        translateY(
+            -2px
+        );
+}
+
 
 .footer-social a:nth-child(3n + 1):hover {
     color: #ef4444;
 
     text-shadow:
         0 0 10px
-        rgba(239, 68, 68, 0.7);
+        rgba(
+            239,
+            68,
+            68,
+            0.7
+        );
 }
+
 
 .footer-social a:nth-child(3n + 2):hover {
     color: #22c55e;
 
     text-shadow:
         0 0 10px
-        rgba(34, 197, 94, 0.7);
+        rgba(
+            34,
+            197,
+            94,
+            0.7
+        );
 }
+
 
 .footer-social a:nth-child(3n + 3):hover {
     color: #3b82f6;
 
     text-shadow:
         0 0 10px
-        rgba(59, 130, 246, 0.7);
+        rgba(
+            59,
+            130,
+            246,
+            0.7
+        );
 }
 
+
 .footer-email {
-    font-size: 0.8rem;
+    margin: 0;
 
     color:
         var(
             --footer-subtle,
             #64748b
         );
+
+    font-size: 0.8rem;
 }
 
-/* BASE */
 
 .footer-bottom {
+    position: relative;
+
+    z-index: 2;
+
+    padding: 15px;
+
     border-top:
         1px solid
         var(
             --footer-bottom-border,
-            rgba(255, 255, 255, 0.05)
+            rgba(
+                255,
+                255,
+                255,
+                0.05
+            )
         );
 
-    text-align: center;
-
-    padding: 15px;
-
-    font-size: 0.8rem;
+    background:
+        var(
+            --footer-bottom-bg,
+            rgba(
+                0,
+                0,
+                0,
+                0.12
+            )
+        );
 
     color:
         var(
             --footer-subtle,
             #64748b
         );
+
+    font-size: 0.8rem;
+
+    text-align: center;
 }
 
-/* RESPONSIVO */
 
-@media (max-width: 768px) {
+.footer-bottom p {
+    margin: 0;
+}
+
+
+@media (
+    max-width: 768px
+) {
     .footer-container {
-        padding: 40px 20px;
+        padding:
+            40px 20px;
 
         text-align: center;
     }
+
+
+    .footer-brand p {
+        margin:
+            0 auto;
+    }
+
+
+    .footer-links a {
+        width: auto;
+    }
+
 
     .footer-social .social-icons {
         justify-content: center;

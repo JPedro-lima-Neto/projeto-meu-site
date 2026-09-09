@@ -1,0 +1,540 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+.hall-page {
+  min-height: 100vh;
+  color: #17324d;
+  font-family: 'Rajdhani', sans-serif;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 247, 195, 0.72),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #d9f0dd 0%,
+      #e9f4d0 44%,
+      #bedba8 100%
+    );
+}
+
+.hall-content {
+  width: min(1280px, calc(100% - 40px));
+  min-height: 75vh;
+  margin: 0 auto;
+  padding: 42px 0 90px;
+}
+
+.hall-topbar {
+  margin-bottom: 28px;
+}
+
+.hall-back-button,
+.hall-empty-button {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 13px 17px;
+  color: #17324d;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.54rem;
+  line-height: 1.5;
+  text-decoration: none;
+  background: #f8f0c8;
+  border: 3px solid #17324d;
+  box-shadow: 5px 5px 0 #456f59;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.hall-back-button:hover,
+.hall-empty-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 #456f59;
+}
+
+.hall-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 42px;
+  padding: 44px 32px 35px;
+  text-align: center;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.14),
+      transparent 35%
+    ),
+    #1c5a49;
+  border: 5px solid #17324d;
+  box-shadow:
+    9px 9px 0 #2b6c55,
+    inset 0 0 0 3px #d7bf69;
+}
+
+.hall-hero::before,
+.hall-hero::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  width: 9px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      #e6ca69 0 10px,
+      #a67d2e 10px 20px
+    );
+  border: 2px solid #17324d;
+}
+
+.hall-hero::before {
+  left: 18px;
+}
+
+.hall-hero::after {
+  right: 18px;
+}
+
+.hall-hero-emblem {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #17324d;
+  background: #efd46f;
+  border: 4px solid #17324d;
+  box-shadow: 5px 5px 0 #8b682b;
+}
+
+.hall-eyebrow {
+  display: block;
+  margin-bottom: 14px;
+  color: #efd970;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 1px;
+}
+
+.hall-hero h1 {
+  margin: 0 0 14px;
+  color: #fff8d7;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1.8rem, 4vw, 3.4rem);
+  line-height: 1.4;
+  text-shadow: 4px 4px 0 #17324d;
+}
+
+.hall-hero > p {
+  max-width: 720px;
+  margin: 0 auto;
+  color: #e5eed7;
+  font-size: 1.06rem;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.hall-summary {
+  width: min(520px, 100%);
+  margin: 30px auto 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  background: #f8f0ca;
+  border: 4px solid #17324d;
+}
+
+.hall-summary div {
+  padding: 18px 12px;
+}
+
+.hall-summary div + div {
+  border-left: 3px solid #17324d;
+}
+
+.hall-summary strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #1f6548;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1rem;
+}
+
+.hall-summary span {
+  color: #536760;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hall-grid {
+  display: grid;
+  gap: 34px;
+}
+
+.hall-champion-card {
+  overflow: hidden;
+  background: #f6efd0;
+  border: 5px solid #17324d;
+  box-shadow: 9px 9px 0 #416f58;
+}
+
+.hall-card-header {
+  min-height: 54px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  color: #f9f1cc;
+  background: #17324d;
+}
+
+.hall-rank,
+.hall-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hall-rank {
+  color: #efd36c;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+}
+
+.hall-date {
+  color: #dfe9da;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hall-card-body {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 0;
+}
+
+.hall-game-cover {
+  position: relative;
+  min-height: 390px;
+  overflow: hidden;
+  background: #a9c5ae;
+  border-right: 5px solid #17324d;
+}
+
+.hall-game-cover > img {
+  width: 100%;
+  height: 100%;
+  min-height: 390px;
+  display: block;
+  object-fit: cover;
+}
+
+.hall-cover-badge {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #17324d;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.46rem;
+  background: rgba(239, 211, 108, 0.96);
+  border: 3px solid #17324d;
+  box-shadow: 4px 4px 0 rgba(23, 50, 77, 0.45);
+}
+
+.hall-card-info {
+  padding: 28px;
+}
+
+.hall-game-label,
+.hall-team-label,
+.hall-memory > span {
+  color: #397255;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  line-height: 1.6;
+}
+
+.hall-card-info h2 {
+  margin: 10px 0 7px;
+  color: #17324d;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
+  line-height: 1.45;
+}
+
+.hall-region {
+  margin: 0;
+  color: #63746b;
+  font-weight: 700;
+}
+
+.hall-divider {
+  height: 4px;
+  margin: 23px 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #17324d 0 12px,
+      transparent 12px 20px
+    );
+}
+
+.hall-team {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.hall-team-slot {
+  min-width: 0;
+  padding: 10px 5px 8px;
+  text-align: center;
+  background: #d9e4c6;
+  border: 3px solid #17324d;
+  box-shadow: 3px 3px 0 #5f8065;
+}
+
+.hall-team-slot.empty {
+  opacity: 0.55;
+  filter: grayscale(0.55);
+}
+
+.hall-pokemon-sprite {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hall-pokemon-sprite img {
+  max-width: 72px;
+  max-height: 72px;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.hall-pokemon-sprite > span {
+  color: #79887c;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.2rem;
+}
+
+.hall-team-slot > span {
+  display: block;
+  overflow: hidden;
+  color: #17324d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: capitalize;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hall-memory {
+  margin-top: 25px;
+  padding: 16px;
+  background: #e8e3bd;
+  border: 3px dashed #526a59;
+}
+
+.hall-memory p {
+  margin: 8px 0 0;
+  color: #52635c;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.hall-empty {
+  max-width: 760px;
+  margin: 20px auto;
+  padding: 55px 35px;
+  text-align: center;
+  background: #f6efd0;
+  border: 5px solid #17324d;
+  box-shadow: 9px 9px 0 #426f58;
+}
+
+.hall-empty-trophy {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a742b;
+  background: #e8dda9;
+  border: 4px dashed #6f775d;
+}
+
+.hall-empty > span {
+  color: #55705f;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+}
+
+.hall-empty h2 {
+  margin: 17px 0 12px;
+  color: #17324d;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.15rem;
+  line-height: 1.55;
+}
+
+.hall-empty p {
+  max-width: 560px;
+  margin: 0 auto 28px;
+  color: #64766d;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.hall-empty-button {
+  margin: 0 auto;
+}
+
+.hall-loading {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.hall-loading-trophy {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #17324d;
+  background: #efd36c;
+  border: 4px solid #17324d;
+  box-shadow: 5px 5px 0 #7b672c;
+  animation: hall-trophy-bounce 0.8s infinite alternate;
+}
+
+.hall-loading > span {
+  margin-top: 8px;
+  color: #2f6e50;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.56rem;
+}
+
+.hall-loading h2 {
+  margin: 0;
+  color: #17324d;
+}
+
+@keyframes hall-trophy-bounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@media (max-width: 900px) {
+  .hall-card-body {
+    grid-template-columns: 210px 1fr;
+  }
+
+  .hall-game-cover,
+  .hall-game-cover > img {
+    min-height: 350px;
+  }
+
+  .hall-team {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .hall-content {
+    width: calc(100% - 28px);
+    padding-top: 28px;
+  }
+
+  .hall-back-button {
+    width: 100%;
+  }
+
+  .hall-hero {
+    padding: 38px 24px 30px;
+  }
+
+  .hall-hero::before,
+  .hall-hero::after {
+    display: none;
+  }
+
+  .hall-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .hall-summary div + div {
+    border-left: none;
+    border-top: 3px solid #17324d;
+  }
+
+  .hall-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hall-card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .hall-game-cover {
+    height: 330px;
+    min-height: 0;
+    border-right: none;
+    border-bottom: 5px solid #17324d;
+  }
+
+  .hall-game-cover > img {
+    height: 330px;
+    min-height: 0;
+  }
+
+  .hall-card-info {
+    padding: 22px 16px 25px;
+  }
+
+  .hall-team {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hall-empty {
+    padding: 42px 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .hall-team {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hall-team-slot {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}

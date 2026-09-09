@@ -23,6 +23,18 @@ from .views import (
     AchievementViewSet,
     LibraryCatalogViewSet,
     UserLibraryEntryViewSet,
+    BeyBladeViewSet,
+    BeyRatchetViewSet,
+    BeyBitViewSet,
+    UserBeyBladeViewSet,
+    UserBeyRatchetViewSet,
+    UserBeyBitViewSet,
+    BeybladeBuildViewSet,
+    BeyAssistBladeViewSet,
+    BeyLockChipViewSet,
+    UserBeyAssistBladeViewSet,
+    UserBeyLockChipViewSet,
+    BeybladeReleaseViewSet,
     CustomAuthToken,
 )
 
@@ -114,6 +126,78 @@ router.register(
     r'reading-library',
     UserLibraryEntryViewSet,
     basename='reading-library'
+)
+
+router.register(
+    r'beyblades',
+    BeyBladeViewSet,
+    basename='beyblades'
+)
+
+router.register(
+    r'bey-ratchets',
+    BeyRatchetViewSet,
+    basename='bey-ratchets'
+)
+
+router.register(
+    r'bey-bits',
+    BeyBitViewSet,
+    basename='bey-bits'
+)
+
+router.register(
+    r'bey-assist-blades',
+    BeyAssistBladeViewSet,
+    basename='bey-assist-blades'
+)
+
+router.register(
+    r'bey-lock-chips',
+    BeyLockChipViewSet,
+    basename='bey-lock-chips'
+)
+
+router.register(
+    r'beyblade-releases',
+    BeybladeReleaseViewSet,
+    basename='beyblade-releases'
+)
+
+router.register(
+    r'user-beyblades',
+    UserBeyBladeViewSet,
+    basename='user-beyblades'
+)
+
+router.register(
+    r'user-bey-ratchets',
+    UserBeyRatchetViewSet,
+    basename='user-bey-ratchets'
+)
+
+router.register(
+    r'user-bey-bits',
+    UserBeyBitViewSet,
+    basename='user-bey-bits'
+)
+
+router.register(
+    r'user-bey-assist-blades',
+    UserBeyAssistBladeViewSet,
+    basename='user-bey-assist-blades'
+)
+
+router.register(
+    r'user-bey-lock-chips',
+    UserBeyLockChipViewSet,
+    basename='user-bey-lock-chips'
+)
+
+router.register(
+    r'beyblade-builds',
+    BeybladeBuildViewSet,
+    basename='beyblade-builds'
 )
 
 

@@ -5,6 +5,7 @@ from django.shortcuts import (
     redirect,
 )
 from django.contrib import messages
+from django.utils.html import format_html
 
 from .models import (
     Platform,
@@ -22,6 +23,23 @@ from .models import (
     Achievement,
     LibraryCatalog,
     UserLibraryEntry,
+    BeyBlade,
+    BeyRatchet,
+    BeyBit,
+    BeyAssistBlade,
+    BeyLockChip,
+    BeyBladeVariant,
+    BeyRatchetVariant,
+    BeyBitVariant,
+    BeyAssistBladeVariant,
+    BeyLockChipVariant,
+    UserBeyBlade,
+    UserBeyRatchet,
+    UserBeyBit,
+    UserBeyAssistBlade,
+    UserBeyLockChip,
+    BeybladeBuild,
+    BeybladeRelease,
 )
 
 from .views import (
@@ -685,16 +703,19 @@ class LibraryCatalogAdmin(admin.ModelAdmin):
     list_filter = (
         'item_type',
         'publication_year',
+        'source',
     )
 
     search_fields = (
         'title',
         'subtitle',
+        'series_name',
         'authors',
         'publishers',
         'isbn',
         'openlibrary_key',
         'edition_key',
+        'source_id',
     )
 
     ordering = (
@@ -713,7 +734,6 @@ class LibraryCatalogAdmin(admin.ModelAdmin):
         'first_publish_year',
         'publication_year',
         'isbn',
-        'cover_url',
         'subjects',
         'languages',
         'page_count',
@@ -801,4 +821,965 @@ class UserLibraryEntryAdmin(admin.ModelAdmin):
 
     ordering = (
         'item__title',
+    )
+
+
+class VariantImagePreviewMixin:
+    @admin.display(
+        description='Imagem'
+    )
+    def image_preview(
+        self,
+        obj
+    ):
+        image_url = None
+
+        if (
+            getattr(
+                obj,
+                'image',
+                None
+            )
+        ):
+            try:
+                image_url = (
+                    obj.image.url
+                )
+            except Exception:
+                image_url = None
+
+        if (
+            not image_url
+            and getattr(
+                obj,
+                'image_url',
+                None
+            )
+        ):
+            image_url = (
+                obj.image_url
+            )
+
+        if not image_url:
+            return '-'
+
+        return format_html(
+            (
+                '<img src="{}" '
+                'style="'
+                'width:72px;'
+                'height:72px;'
+                'object-fit:contain;'
+                'border-radius:8px;'
+                'background:#111;'
+                'padding:4px;'
+                '" />'
+            ),
+            image_url
+        )
+
+
+@admin.register(BeyBlade)
+class BeyBladeAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'name',
+        'bey_type',
+        'spin',
+        'weight',
+        'code',
+        'variant_count',
+    )
+
+    list_filter = (
+        'bey_type',
+        'spin',
+    )
+
+    search_fields = (
+        'name',
+        'code',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    @admin.display(
+        description='Variantes'
+    )
+    def variant_count(
+        self,
+        obj
+    ):
+        return obj.variants.count()
+
+
+@admin.register(BeyRatchet)
+class BeyRatchetAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'name',
+        'height',
+        'protrusions',
+        'weight',
+        'variant_count',
+    )
+
+    search_fields = (
+        'name',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    @admin.display(
+        description='Variantes'
+    )
+    def variant_count(
+        self,
+        obj
+    ):
+        return obj.variants.count()
+
+
+@admin.register(BeyBit)
+class BeyBitAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'name',
+        'abbreviation',
+        'bit_type',
+        'weight',
+        'variant_count',
+    )
+
+    list_filter = (
+        'bit_type',
+    )
+
+    search_fields = (
+        'name',
+        'abbreviation',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    @admin.display(
+        description='Variantes'
+    )
+    def variant_count(
+        self,
+        obj
+    ):
+        return obj.variants.count()
+
+
+@admin.register(BeyAssistBlade)
+class BeyAssistBladeAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'name',
+        'weight',
+        'variant_count',
+    )
+
+    search_fields = (
+        'name',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    @admin.display(
+        description='Variantes'
+    )
+    def variant_count(
+        self,
+        obj
+    ):
+        return obj.variants.count()
+
+
+@admin.register(BeyLockChip)
+class BeyLockChipAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'name',
+        'weight',
+        'variant_count',
+    )
+
+    search_fields = (
+        'name',
+    )
+
+    ordering = (
+        'name',
+    )
+
+    @admin.display(
+        description='Variantes'
+    )
+    def variant_count(
+        self,
+        obj
+    ):
+        return obj.variants.count()
+
+
+@admin.register(BeyBladeVariant)
+class BeyBladeVariantAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'blade',
+        'variant_name',
+        'display_colors',
+        'source_code',
+        'updated_at',
+    )
+
+    list_filter = (
+        'blade',
+    )
+
+    search_fields = (
+        'blade__name',
+        'variant_name',
+        'source_code',
+    )
+
+    autocomplete_fields = (
+        'blade',
+    )
+
+    ordering = (
+        'blade__name',
+        'variant_name',
+    )
+
+    fieldsets = (
+        (
+            'Peça base',
+            {
+                'fields': (
+                    'blade',
+                    'variant_name',
+                    'colors',
+                    'source_code',
+                )
+            }
+        ),
+        (
+            'Imagem da variante',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Observações',
+            {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
+    )
+
+    @admin.display(
+        description='Cores'
+    )
+    def display_colors(
+        self,
+        obj
+    ):
+        if not obj.colors:
+            return '-'
+
+        if isinstance(
+            obj.colors,
+            list
+        ):
+            return ', '.join(
+                str(color)
+                for color
+                in obj.colors
+            )
+
+        return str(
+            obj.colors
+        )
+
+
+@admin.register(BeyRatchetVariant)
+class BeyRatchetVariantAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'ratchet',
+        'variant_name',
+        'display_colors',
+        'source_code',
+        'updated_at',
+    )
+
+    list_filter = (
+        'ratchet',
+    )
+
+    search_fields = (
+        'ratchet__name',
+        'variant_name',
+        'source_code',
+    )
+
+    autocomplete_fields = (
+        'ratchet',
+    )
+
+    ordering = (
+        'ratchet__name',
+        'variant_name',
+    )
+
+    fieldsets = (
+        (
+            'Peça base',
+            {
+                'fields': (
+                    'ratchet',
+                    'variant_name',
+                    'colors',
+                    'source_code',
+                )
+            }
+        ),
+        (
+            'Imagem da variante',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Observações',
+            {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
+    )
+
+    @admin.display(
+        description='Cores'
+    )
+    def display_colors(
+        self,
+        obj
+    ):
+        if not obj.colors:
+            return '-'
+
+        if isinstance(
+            obj.colors,
+            list
+        ):
+            return ', '.join(
+                str(color)
+                for color
+                in obj.colors
+            )
+
+        return str(
+            obj.colors
+        )
+
+
+@admin.register(BeyBitVariant)
+class BeyBitVariantAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'bit',
+        'variant_name',
+        'display_colors',
+        'source_code',
+        'updated_at',
+    )
+
+    list_filter = (
+        'bit',
+    )
+
+    search_fields = (
+        'bit__name',
+        'bit__abbreviation',
+        'variant_name',
+        'source_code',
+    )
+
+    autocomplete_fields = (
+        'bit',
+    )
+
+    ordering = (
+        'bit__name',
+        'variant_name',
+    )
+
+    fieldsets = (
+        (
+            'Peça base',
+            {
+                'fields': (
+                    'bit',
+                    'variant_name',
+                    'colors',
+                    'source_code',
+                )
+            }
+        ),
+        (
+            'Imagem da variante',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Observações',
+            {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
+    )
+
+    @admin.display(
+        description='Cores'
+    )
+    def display_colors(
+        self,
+        obj
+    ):
+        if not obj.colors:
+            return '-'
+
+        if isinstance(
+            obj.colors,
+            list
+        ):
+            return ', '.join(
+                str(color)
+                for color
+                in obj.colors
+            )
+
+        return str(
+            obj.colors
+        )
+
+
+@admin.register(BeyAssistBladeVariant)
+class BeyAssistBladeVariantAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'assist_blade',
+        'variant_name',
+        'display_colors',
+        'source_code',
+        'updated_at',
+    )
+
+    list_filter = (
+        'assist_blade',
+    )
+
+    search_fields = (
+        'assist_blade__name',
+        'variant_name',
+        'source_code',
+    )
+
+    autocomplete_fields = (
+        'assist_blade',
+    )
+
+    ordering = (
+        'assist_blade__name',
+        'variant_name',
+    )
+
+    fieldsets = (
+        (
+            'Peça base',
+            {
+                'fields': (
+                    'assist_blade',
+                    'variant_name',
+                    'colors',
+                    'source_code',
+                )
+            }
+        ),
+        (
+            'Imagem da variante',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Observações',
+            {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
+    )
+
+    @admin.display(
+        description='Cores'
+    )
+    def display_colors(
+        self,
+        obj
+    ):
+        if not obj.colors:
+            return '-'
+
+        if isinstance(
+            obj.colors,
+            list
+        ):
+            return ', '.join(
+                str(color)
+                for color
+                in obj.colors
+            )
+
+        return str(
+            obj.colors
+        )
+
+
+@admin.register(BeyLockChipVariant)
+class BeyLockChipVariantAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'lock_chip',
+        'variant_name',
+        'display_colors',
+        'source_code',
+        'updated_at',
+    )
+
+    list_filter = (
+        'lock_chip',
+    )
+
+    search_fields = (
+        'lock_chip__name',
+        'variant_name',
+        'source_code',
+    )
+
+    autocomplete_fields = (
+        'lock_chip',
+    )
+
+    ordering = (
+        'lock_chip__name',
+        'variant_name',
+    )
+
+    fieldsets = (
+        (
+            'Peça base',
+            {
+                'fields': (
+                    'lock_chip',
+                    'variant_name',
+                    'colors',
+                    'source_code',
+                )
+            }
+        ),
+        (
+            'Imagem da variante',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Observações',
+            {
+                'fields': (
+                    'notes',
+                )
+            }
+        ),
+    )
+
+    @admin.display(
+        description='Cores'
+    )
+    def display_colors(
+        self,
+        obj
+    ):
+        if not obj.colors:
+            return '-'
+
+        if isinstance(
+            obj.colors,
+            list
+        ):
+            return ', '.join(
+                str(color)
+                for color
+                in obj.colors
+            )
+
+        return str(
+            obj.colors
+        )
+
+
+@admin.register(UserBeyBlade)
+class UserBeyBladeAdmin(admin.ModelAdmin):
+    list_display = (
+        'blade',
+        'variant',
+        'user',
+        'quantity',
+        'acquired_at',
+    )
+
+    search_fields = (
+        'blade__name',
+        'variant__variant_name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'blade',
+        'variant',
+        'user',
+    )
+
+
+@admin.register(UserBeyRatchet)
+class UserBeyRatchetAdmin(admin.ModelAdmin):
+    list_display = (
+        'ratchet',
+        'variant',
+        'user',
+        'quantity',
+        'acquired_at',
+    )
+
+    search_fields = (
+        'ratchet__name',
+        'variant__variant_name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'ratchet',
+        'variant',
+        'user',
+    )
+
+
+@admin.register(UserBeyBit)
+class UserBeyBitAdmin(admin.ModelAdmin):
+    list_display = (
+        'bit',
+        'variant',
+        'user',
+        'quantity',
+        'acquired_at',
+    )
+
+    search_fields = (
+        'bit__name',
+        'variant__variant_name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'bit',
+        'variant',
+        'user',
+    )
+
+
+@admin.register(UserBeyAssistBlade)
+class UserBeyAssistBladeAdmin(admin.ModelAdmin):
+    list_display = (
+        'assist_blade',
+        'variant',
+        'user',
+        'quantity',
+        'acquired_at',
+    )
+
+    search_fields = (
+        'assist_blade__name',
+        'variant__variant_name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'assist_blade',
+        'variant',
+        'user',
+    )
+
+
+@admin.register(UserBeyLockChip)
+class UserBeyLockChipAdmin(admin.ModelAdmin):
+    list_display = (
+        'lock_chip',
+        'variant',
+        'user',
+        'quantity',
+        'acquired_at',
+    )
+
+    search_fields = (
+        'lock_chip__name',
+        'variant__variant_name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'lock_chip',
+        'variant',
+        'user',
+    )
+
+
+@admin.register(BeybladeBuild)
+class BeybladeBuildAdmin(admin.ModelAdmin):
+    list_display = (
+        'blade',
+        'blade_variant',
+        'ratchet',
+        'ratchet_variant',
+        'bit',
+        'bit_variant',
+        'user',
+        'favorite',
+    )
+
+    list_filter = (
+        'favorite',
+        'blade__bey_type',
+    )
+
+    search_fields = (
+        'name',
+        'blade__name',
+        'blade_variant__variant_name',
+        'ratchet__name',
+        'ratchet_variant__variant_name',
+        'bit__name',
+        'bit_variant__variant_name',
+        'assist_blade__name',
+        'lock_chip__name',
+        'user__username',
+    )
+
+    autocomplete_fields = (
+        'user',
+        'blade',
+        'blade_variant',
+        'ratchet',
+        'ratchet_variant',
+        'bit',
+        'bit_variant',
+        'assist_blade',
+        'assist_blade_variant',
+        'lock_chip',
+        'lock_chip_variant',
+    )
+
+    ordering = (
+        '-favorite',
+        'blade__name',
+    )
+
+
+@admin.register(BeybladeRelease)
+class BeybladeReleaseAdmin(
+    VariantImagePreviewMixin,
+    admin.ModelAdmin
+):
+    list_display = (
+        'image_preview',
+        'code',
+        'name',
+        'system',
+        'blade',
+        'blade_variant',
+        'ratchet',
+        'ratchet_variant',
+        'bit',
+        'bit_variant',
+    )
+
+    list_filter = (
+        'system',
+    )
+
+    search_fields = (
+        'code',
+        'name',
+        'blade__name',
+        'blade_variant__variant_name',
+        'ratchet__name',
+        'ratchet_variant__variant_name',
+        'bit__name',
+        'bit__abbreviation',
+        'bit_variant__variant_name',
+        'assist_blade__name',
+        'assist_blade_variant__variant_name',
+        'lock_chip__name',
+        'lock_chip_variant__variant_name',
+    )
+
+    autocomplete_fields = (
+        'blade',
+        'blade_variant',
+        'ratchet',
+        'ratchet_variant',
+        'bit',
+        'bit_variant',
+        'assist_blade',
+        'assist_blade_variant',
+        'lock_chip',
+        'lock_chip_variant',
+    )
+
+    ordering = (
+        'code',
+    )
+
+    fieldsets = (
+        (
+            'Lançamento',
+            {
+                'fields': (
+                    'code',
+                    'name',
+                    'system',
+                    'release_date',
+                )
+            }
+        ),
+        (
+            'Blade',
+            {
+                'fields': (
+                    'blade',
+                    'blade_variant',
+                )
+            }
+        ),
+        (
+            'Ratchet',
+            {
+                'fields': (
+                    'ratchet',
+                    'ratchet_variant',
+                )
+            }
+        ),
+        (
+            'Bit',
+            {
+                'fields': (
+                    'bit',
+                    'bit_variant',
+                )
+            }
+        ),
+        (
+            'Sistema CX',
+            {
+                'fields': (
+                    'lock_chip',
+                    'lock_chip_variant',
+                    'assist_blade',
+                    'assist_blade_variant',
+                )
+            }
+        ),
+        (
+            'Imagem do lançamento',
+            {
+                'fields': (
+                    'image',
+                    'image_url',
+                )
+            }
+        ),
+        (
+            'Fonte e observações',
+            {
+                'fields': (
+                    'source_url',
+                    'notes',
+                )
+            }
+        ),
     )

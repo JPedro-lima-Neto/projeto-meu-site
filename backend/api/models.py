@@ -966,6 +966,42 @@ class LibraryCatalog(models.Model):
         ),
     ]
 
+    SOURCE_CHOICES = [
+        (
+            'OPEN_LIBRARY',
+            'Open Library'
+        ),
+        (
+            'GCD',
+            'Grand Comics Database'
+        ),
+        (
+            'COMIC_VINE',
+            'Comic Vine'
+        ),
+        (
+            'GOOGLE_BOOKS',
+            'Google Books'
+        ),
+        (
+            'MANUAL',
+            'Cadastro manual'
+        ),
+    ]
+
+    source = models.CharField(
+        max_length=30,
+        choices=SOURCE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    source_id = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
     openlibrary_key = models.CharField(
         max_length=150,
         unique=True,
@@ -985,6 +1021,18 @@ class LibraryCatalog(models.Model):
 
     subtitle = models.CharField(
         max_length=300,
+        blank=True,
+        null=True
+    )
+
+    series_name = models.CharField(
+        max_length=300,
+        blank=True,
+        null=True
+    )
+
+    issue_number = models.CharField(
+        max_length=50,
         blank=True,
         null=True
     )
@@ -1010,6 +1058,12 @@ class LibraryCatalog(models.Model):
         blank=True
     )
 
+    country = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
     first_publish_year = models.PositiveIntegerField(
         blank=True,
         null=True
@@ -1027,6 +1081,12 @@ class LibraryCatalog(models.Model):
 
     cover_url = models.URLField(
         max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    cover_image = models.ImageField(
+        upload_to='library/covers/',
         blank=True,
         null=True
     )
@@ -1059,6 +1119,25 @@ class LibraryCatalog(models.Model):
             'title'
         ]
 
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'source',
+                    'source_id'
+                ],
+                name='unique_library_source_item',
+                condition=(
+                    models.Q(
+                        source__isnull=False
+                    )
+                    &
+                    models.Q(
+                        source_id__isnull=False
+                    )
+                )
+            )
+        ]
+
         verbose_name = (
             'Obra - catálogo da biblioteca'
         )
@@ -1068,14 +1147,24 @@ class LibraryCatalog(models.Model):
         )
 
     def __str__(self):
+        name = self.title
+
+        if self.series_name:
+            name = self.series_name
+
+        if self.issue_number:
+            name = (
+                f"{name} "
+                f"#{self.issue_number}"
+            )
+
         if self.publication_year:
             return (
-                f"{self.title} "
+                f"{name} "
                 f"({self.publication_year})"
             )
 
-        return self.title
-
+        return name
 
 class UserLibraryEntry(models.Model):
     READING_STATUS_CHOICES = [
@@ -1414,3 +1503,1943 @@ def save_user_profile(
         'profile'
     ):
         instance.profile.save()
+
+
+class BeyBlade(models.Model):
+    TYPE_CHOICES = [
+        (
+            'ATAQUE',
+            'Ataque'
+        ),
+        (
+            'DEFESA',
+            'Defesa'
+        ),
+        (
+            'STAMINA',
+            'Stamina'
+        ),
+        (
+            'BALANCE',
+            'Balance'
+        ),
+    ]
+
+    SPIN_CHOICES = [
+        (
+            'RIGHT',
+            'Direita'
+        ),
+        (
+            'LEFT',
+            'Esquerda'
+        ),
+        (
+            'DUAL',
+            'Dual Spin'
+        ),
+    ]
+
+    name = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    code = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    bey_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    spin = models.CharField(
+        max_length=10,
+        choices=SPIN_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/blades/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Blade'
+        verbose_name_plural = 'Blades'
+
+    def __str__(self):
+        return self.name
+
+
+class BeyRatchet(models.Model):
+    name = models.CharField(
+        max_length=50,
+        unique=True
+    )
+
+    height = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    protrusions = models.PositiveIntegerField(
+        blank=True,
+        null=True
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/ratchets/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Ratchet'
+        verbose_name_plural = 'Ratchets'
+
+    def __str__(self):
+        return self.name
+
+
+class BeyBit(models.Model):
+    TYPE_CHOICES = [
+        (
+            'ATAQUE',
+            'Ataque'
+        ),
+        (
+            'DEFESA',
+            'Defesa'
+        ),
+        (
+            'STAMINA',
+            'Stamina'
+        ),
+        (
+            'BALANCE',
+            'Balance'
+        ),
+    ]
+
+    name = models.CharField(
+        max_length=100,
+        unique=True
+    )
+
+    abbreviation = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+
+    bit_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/bits/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Bit'
+        verbose_name_plural = 'Bits'
+
+    def __str__(self):
+        if self.abbreviation:
+            return (
+                f"{self.name} "
+                f"({self.abbreviation})"
+            )
+
+        return self.name
+
+
+class BeyAssistBlade(models.Model):
+    name = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/assist-blades/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Assist Blade'
+        verbose_name_plural = 'Assist Blades'
+
+    def __str__(self):
+        return self.name
+
+
+class BeyLockChip(models.Model):
+    name = models.CharField(
+        max_length=150,
+        unique=True
+    )
+
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/lock-chips/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Lock Chip'
+        verbose_name_plural = 'Lock Chips'
+
+    def __str__(self):
+        return self.name
+
+
+class BeyBladeVariant(models.Model):
+    blade = models.ForeignKey(
+        BeyBlade,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    variant_name = models.CharField(
+        max_length=150
+    )
+
+    edition_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    colors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    source_code = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True
+    )
+
+    catalog_key = models.CharField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/variants/blades/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'blade__name',
+            '-is_default',
+            'variant_name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'blade',
+                    'variant_name'
+                ],
+                name='unique_bey_blade_variant'
+            )
+        ]
+
+        verbose_name = 'Variante de Blade'
+        verbose_name_plural = 'Variantes de Blade'
+
+    def __str__(self):
+        return (
+            f"{self.blade.name} - "
+            f"{self.variant_name}"
+        )
+
+
+class BeyRatchetVariant(models.Model):
+    ratchet = models.ForeignKey(
+        BeyRatchet,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    variant_name = models.CharField(
+        max_length=150
+    )
+
+    edition_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    colors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    source_code = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True
+    )
+
+    catalog_key = models.CharField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/variants/ratchets/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'ratchet__name',
+            '-is_default',
+            'variant_name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'ratchet',
+                    'variant_name'
+                ],
+                name='unique_bey_ratchet_variant'
+            )
+        ]
+
+        verbose_name = 'Variante de Ratchet'
+        verbose_name_plural = 'Variantes de Ratchet'
+
+    def __str__(self):
+        return (
+            f"{self.ratchet.name} - "
+            f"{self.variant_name}"
+        )
+
+
+class BeyBitVariant(models.Model):
+    bit = models.ForeignKey(
+        BeyBit,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    variant_name = models.CharField(
+        max_length=150
+    )
+
+    edition_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    colors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    source_code = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True
+    )
+
+    catalog_key = models.CharField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/variants/bits/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'bit__name',
+            '-is_default',
+            'variant_name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'bit',
+                    'variant_name'
+                ],
+                name='unique_bey_bit_variant'
+            )
+        ]
+
+        verbose_name = 'Variante de Bit'
+        verbose_name_plural = 'Variantes de Bit'
+
+    def __str__(self):
+        return (
+            f"{self.bit.name} - "
+            f"{self.variant_name}"
+        )
+
+
+class BeyAssistBladeVariant(models.Model):
+    assist_blade = models.ForeignKey(
+        BeyAssistBlade,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    variant_name = models.CharField(
+        max_length=150
+    )
+
+    edition_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    colors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    source_code = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True
+    )
+
+    catalog_key = models.CharField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/variants/assist-blades/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'assist_blade__name',
+            '-is_default',
+            'variant_name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'assist_blade',
+                    'variant_name'
+                ],
+                name='unique_bey_assist_blade_variant'
+            )
+        ]
+
+        verbose_name = 'Variante de Assist Blade'
+        verbose_name_plural = 'Variantes de Assist Blade'
+
+    def __str__(self):
+        return (
+            f"{self.assist_blade.name} - "
+            f"{self.variant_name}"
+        )
+
+
+class BeyLockChipVariant(models.Model):
+    lock_chip = models.ForeignKey(
+        BeyLockChip,
+        on_delete=models.CASCADE,
+        related_name='variants'
+    )
+
+    variant_name = models.CharField(
+        max_length=150
+    )
+
+    edition_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True
+    )
+
+    colors = models.JSONField(
+        default=list,
+        blank=True
+    )
+
+    source_code = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True
+    )
+
+    catalog_key = models.CharField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/variants/lock-chips/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'lock_chip__name',
+            '-is_default',
+            'variant_name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'lock_chip',
+                    'variant_name'
+                ],
+                name='unique_bey_lock_chip_variant'
+            )
+        ]
+
+        verbose_name = 'Variante de Lock Chip'
+        verbose_name_plural = 'Variantes de Lock Chip'
+
+    def __str__(self):
+        return (
+            f"{self.lock_chip.name} - "
+            f"{self.variant_name}"
+        )
+
+
+class UserBeyBlade(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_bey_blades'
+    )
+
+    blade = models.ForeignKey(
+        BeyBlade,
+        on_delete=models.CASCADE,
+        related_name='owned_by_users'
+    )
+
+    variant = models.ForeignKey(
+        BeyBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'blade'
+                ],
+                condition=models.Q(
+                    variant__isnull=True
+                ),
+                name=(
+                    'unique_user_bey_blade_'
+                    'without_variant'
+                )
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'variant'
+                ],
+                condition=models.Q(
+                    variant__isnull=False
+                ),
+                name=(
+                    'unique_user_bey_blade_'
+                    'variant'
+                )
+            ),
+        ]
+
+        ordering = [
+            'blade__name'
+        ]
+
+        verbose_name = 'Blade do usuário'
+        verbose_name_plural = 'Blades do usuário'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.variant
+            and self.variant.blade_id
+            != self.blade_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante selecionada não '
+                    'pertence à Blade informada.'
+                )
+            )
+
+    def __str__(self):
+        if self.variant:
+            return (
+                f"{self.variant} - "
+                f"{self.user.username}"
+            )
+
+        return (
+            f"{self.blade.name} - "
+            f"{self.user.username}"
+        )
+
+
+class UserBeyRatchet(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_bey_ratchets'
+    )
+
+    ratchet = models.ForeignKey(
+        BeyRatchet,
+        on_delete=models.CASCADE,
+        related_name='owned_by_users'
+    )
+
+    variant = models.ForeignKey(
+        BeyRatchetVariant,
+        on_delete=models.SET_NULL,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'ratchet'
+                ],
+                condition=models.Q(
+                    variant__isnull=True
+                ),
+                name=(
+                    'unique_user_bey_ratchet_'
+                    'without_variant'
+                )
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'variant'
+                ],
+                condition=models.Q(
+                    variant__isnull=False
+                ),
+                name=(
+                    'unique_user_bey_ratchet_'
+                    'variant'
+                )
+            ),
+        ]
+
+        ordering = [
+            'ratchet__name'
+        ]
+
+        verbose_name = 'Ratchet do usuário'
+        verbose_name_plural = 'Ratchets do usuário'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.variant
+            and self.variant.ratchet_id
+            != self.ratchet_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante selecionada não '
+                    'pertence ao Ratchet informado.'
+                )
+            )
+
+    def __str__(self):
+        if self.variant:
+            return (
+                f"{self.variant} - "
+                f"{self.user.username}"
+            )
+
+        return (
+            f"{self.ratchet.name} - "
+            f"{self.user.username}"
+        )
+
+
+class UserBeyBit(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_bey_bits'
+    )
+
+    bit = models.ForeignKey(
+        BeyBit,
+        on_delete=models.CASCADE,
+        related_name='owned_by_users'
+    )
+
+    variant = models.ForeignKey(
+        BeyBitVariant,
+        on_delete=models.SET_NULL,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'bit'
+                ],
+                condition=models.Q(
+                    variant__isnull=True
+                ),
+                name=(
+                    'unique_user_bey_bit_'
+                    'without_variant'
+                )
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'variant'
+                ],
+                condition=models.Q(
+                    variant__isnull=False
+                ),
+                name=(
+                    'unique_user_bey_bit_'
+                    'variant'
+                )
+            ),
+        ]
+
+        ordering = [
+            'bit__name'
+        ]
+
+        verbose_name = 'Bit do usuário'
+        verbose_name_plural = 'Bits do usuário'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.variant
+            and self.variant.bit_id
+            != self.bit_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante selecionada não '
+                    'pertence ao Bit informado.'
+                )
+            )
+
+    def __str__(self):
+        if self.variant:
+            return (
+                f"{self.variant} - "
+                f"{self.user.username}"
+            )
+
+        return (
+            f"{self.bit.name} - "
+            f"{self.user.username}"
+        )
+
+
+class UserBeyAssistBlade(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_bey_assist_blades'
+    )
+
+    assist_blade = models.ForeignKey(
+        BeyAssistBlade,
+        on_delete=models.CASCADE,
+        related_name='owned_by_users'
+    )
+
+    variant = models.ForeignKey(
+        BeyAssistBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'assist_blade'
+                ],
+                condition=models.Q(
+                    variant__isnull=True
+                ),
+                name=(
+                    'unique_user_bey_assist_'
+                    'without_variant'
+                )
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'variant'
+                ],
+                condition=models.Q(
+                    variant__isnull=False
+                ),
+                name=(
+                    'unique_user_bey_assist_'
+                    'variant'
+                )
+            ),
+        ]
+
+        ordering = [
+            'assist_blade__name'
+        ]
+
+        verbose_name = 'Assist Blade do usuário'
+        verbose_name_plural = 'Assist Blades do usuário'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.variant
+            and self.variant.assist_blade_id
+            != self.assist_blade_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante selecionada não '
+                    'pertence à Assist Blade informada.'
+                )
+            )
+
+    def __str__(self):
+        if self.variant:
+            return (
+                f"{self.variant} - "
+                f"{self.user.username}"
+            )
+
+        return (
+            f"{self.assist_blade.name} - "
+            f"{self.user.username}"
+        )
+
+
+class UserBeyLockChip(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='owned_bey_lock_chips'
+    )
+
+    lock_chip = models.ForeignKey(
+        BeyLockChip,
+        on_delete=models.CASCADE,
+        related_name='owned_by_users'
+    )
+
+    variant = models.ForeignKey(
+        BeyLockChipVariant,
+        on_delete=models.SET_NULL,
+        related_name='owned_by_users',
+        blank=True,
+        null=True
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1
+    )
+
+    acquired_at = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'lock_chip'
+                ],
+                condition=models.Q(
+                    variant__isnull=True
+                ),
+                name=(
+                    'unique_user_bey_lock_'
+                    'without_variant'
+                )
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'variant'
+                ],
+                condition=models.Q(
+                    variant__isnull=False
+                ),
+                name=(
+                    'unique_user_bey_lock_'
+                    'variant'
+                )
+            ),
+        ]
+
+        ordering = [
+            'lock_chip__name'
+        ]
+
+        verbose_name = 'Lock Chip do usuário'
+        verbose_name_plural = 'Lock Chips do usuário'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.variant
+            and self.variant.lock_chip_id
+            != self.lock_chip_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante selecionada não '
+                    'pertence ao Lock Chip informado.'
+                )
+            )
+
+    def __str__(self):
+        if self.variant:
+            return (
+                f"{self.variant} - "
+                f"{self.user.username}"
+            )
+
+        return (
+            f"{self.lock_chip.name} - "
+            f"{self.user.username}"
+        )
+
+
+class BeybladeBuild(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='beyblade_builds'
+    )
+
+    name = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True
+    )
+
+    blade = models.ForeignKey(
+        BeyBlade,
+        on_delete=models.PROTECT,
+        related_name='builds'
+    )
+
+    blade_variant = models.ForeignKey(
+        BeyBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    ratchet = models.ForeignKey(
+        BeyRatchet,
+        on_delete=models.PROTECT,
+        related_name='builds'
+    )
+
+    ratchet_variant = models.ForeignKey(
+        BeyRatchetVariant,
+        on_delete=models.SET_NULL,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    bit = models.ForeignKey(
+        BeyBit,
+        on_delete=models.PROTECT,
+        related_name='builds'
+    )
+
+    bit_variant = models.ForeignKey(
+        BeyBitVariant,
+        on_delete=models.SET_NULL,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    assist_blade = models.ForeignKey(
+        BeyAssistBlade,
+        on_delete=models.PROTECT,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    assist_blade_variant = models.ForeignKey(
+        BeyAssistBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    lock_chip = models.ForeignKey(
+        BeyLockChip,
+        on_delete=models.PROTECT,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    lock_chip_variant = models.ForeignKey(
+        BeyLockChipVariant,
+        on_delete=models.SET_NULL,
+        related_name='builds',
+        blank=True,
+        null=True
+    )
+
+    favorite = models.BooleanField(
+        default=False
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            '-favorite',
+            'blade__name'
+        ]
+
+        verbose_name = 'Build Beyblade'
+        verbose_name_plural = 'Builds Beyblade'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.blade_variant
+            and self.blade_variant.blade_id
+            != self.blade_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante da Blade não '
+                    'corresponde à Blade.'
+                )
+            )
+
+        if (
+            self.ratchet_variant
+            and self.ratchet_variant.ratchet_id
+            != self.ratchet_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Ratchet não '
+                    'corresponde ao Ratchet.'
+                )
+            )
+
+        if (
+            self.bit_variant
+            and self.bit_variant.bit_id
+            != self.bit_id
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Bit não '
+                    'corresponde ao Bit.'
+                )
+            )
+
+        if (
+            self.assist_blade_variant
+            and (
+                not self.assist_blade_id
+                or (
+                    self.assist_blade_variant.assist_blade_id
+                    != self.assist_blade_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante da Assist Blade não '
+                    'corresponde à Assist Blade.'
+                )
+            )
+
+        if (
+            self.lock_chip_variant
+            and (
+                not self.lock_chip_id
+                or (
+                    self.lock_chip_variant.lock_chip_id
+                    != self.lock_chip_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Lock Chip não '
+                    'corresponde ao Lock Chip.'
+                )
+            )
+
+    def __str__(self):
+        parts = []
+
+        if self.lock_chip:
+            parts.append(
+                self.lock_chip.name
+            )
+
+        parts.append(
+            self.blade.name
+        )
+
+        if self.assist_blade:
+            parts.append(
+                self.assist_blade.name
+            )
+
+        parts.append(
+            self.ratchet.name
+        )
+
+        parts.append(
+            (
+                self.bit.abbreviation
+                or self.bit.name
+            )
+        )
+
+        return ' '.join(
+            parts
+        )
+
+
+class BeybladeRelease(models.Model):
+    SYSTEM_CHOICES = [
+        (
+            'BX',
+            'Basic Line'
+        ),
+        (
+            'UX',
+            'Unique Line'
+        ),
+        (
+            'CX',
+            'Custom Line'
+        ),
+        (
+            'EX',
+            'Exclusive'
+        ),
+        (
+            'OUTRO',
+            'Outro'
+        ),
+    ]
+
+    PRODUCT_TYPE_CHOICES = [
+        (
+            'STARTER',
+            'Starter'
+        ),
+        (
+            'BOOSTER',
+            'Booster'
+        ),
+        (
+            'RANDOM_BOOSTER',
+            'Random Booster'
+        ),
+        (
+            'SET',
+            'Set'
+        ),
+        (
+            'DECK_SET',
+            'Deck Set'
+        ),
+        (
+            'LIMITED',
+            'Limitado / Exclusivo'
+        ),
+        (
+            'PRIZE',
+            'Prêmio / Campanha'
+        ),
+        (
+            'OTHER',
+            'Outro'
+        ),
+    ]
+
+    code = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True
+    )
+
+    slug = models.SlugField(
+        max_length=300,
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    name = models.CharField(
+        max_length=250
+    )
+
+    product_name = models.CharField(
+        max_length=300,
+        blank=True,
+        null=True
+    )
+
+    edition_name = models.CharField(
+        max_length=250,
+        blank=True,
+        null=True
+    )
+
+    product_type = models.CharField(
+        max_length=30,
+        choices=PRODUCT_TYPE_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    slot_number = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    system = models.CharField(
+        max_length=20,
+        choices=SYSTEM_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    release_date = models.DateField(
+        blank=True,
+        null=True
+    )
+
+    blade = models.ForeignKey(
+        BeyBlade,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    blade_variant = models.ForeignKey(
+        BeyBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    ratchet = models.ForeignKey(
+        BeyRatchet,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    ratchet_variant = models.ForeignKey(
+        BeyRatchetVariant,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    bit = models.ForeignKey(
+        BeyBit,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    bit_variant = models.ForeignKey(
+        BeyBitVariant,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    assist_blade = models.ForeignKey(
+        BeyAssistBlade,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    assist_blade_variant = models.ForeignKey(
+        BeyAssistBladeVariant,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    lock_chip = models.ForeignKey(
+        BeyLockChip,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    lock_chip_variant = models.ForeignKey(
+        BeyLockChipVariant,
+        on_delete=models.SET_NULL,
+        related_name='releases',
+        blank=True,
+        null=True
+    )
+
+    image = models.ImageField(
+        upload_to='beyblade/releases/',
+        blank=True,
+        null=True
+    )
+
+    image_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    source_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    source_item_id = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        db_index=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'code',
+            'slot_number',
+            'name'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'source_url',
+                    'source_item_id'
+                ],
+                condition=(
+                    models.Q(
+                        source_url__isnull=False
+                    )
+                    &
+                    models.Q(
+                        source_item_id__isnull=False
+                    )
+                ),
+                name='unique_beyblade_source_item'
+            )
+        ]
+
+        verbose_name = 'Lançamento Beyblade'
+        verbose_name_plural = 'Lançamentos Beyblade'
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.blade_variant
+            and (
+                not self.blade_id
+                or (
+                    self.blade_variant.blade_id
+                    != self.blade_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante da Blade não '
+                    'corresponde à Blade.'
+                )
+            )
+
+        if (
+            self.ratchet_variant
+            and (
+                not self.ratchet_id
+                or (
+                    self.ratchet_variant.ratchet_id
+                    != self.ratchet_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Ratchet não '
+                    'corresponde ao Ratchet.'
+                )
+            )
+
+        if (
+            self.bit_variant
+            and (
+                not self.bit_id
+                or (
+                    self.bit_variant.bit_id
+                    != self.bit_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Bit não '
+                    'corresponde ao Bit.'
+                )
+            )
+
+        if (
+            self.assist_blade_variant
+            and (
+                not self.assist_blade_id
+                or (
+                    self.assist_blade_variant.assist_blade_id
+                    != self.assist_blade_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante da Assist Blade não '
+                    'corresponde à Assist Blade.'
+                )
+            )
+
+        if (
+            self.lock_chip_variant
+            and (
+                not self.lock_chip_id
+                or (
+                    self.lock_chip_variant.lock_chip_id
+                    != self.lock_chip_id
+                )
+            )
+        ):
+            raise ValidationError(
+                (
+                    'A variante do Lock Chip não '
+                    'corresponde ao Lock Chip.'
+                )
+            )
+
+    def __str__(self):
+        prefix = (
+            self.code
+            or 'SEM CÓDIGO'
+        )
+
+        label = self.name
+
+        if self.edition_name:
+            label = (
+                f"{label} - "
+                f"{self.edition_name}"
+            )
+
+        if self.slot_number:
+            label = (
+                f"{label} "
+                f"[#{self.slot_number}]"
+            )
+
+        return (
+            f"{prefix} - "
+            f"{label}"
+        )

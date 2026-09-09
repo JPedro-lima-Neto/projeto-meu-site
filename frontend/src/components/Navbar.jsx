@@ -91,6 +91,68 @@ const IconConsoles = () => (
   </svg>
 );
 
+const IconGames = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path
+      d="
+        M6 11
+        h4
+      "
+    />
+
+    <path
+      d="
+        M8 9
+        v4
+      "
+    />
+
+    <path
+      d="
+        M15 12
+        h.01
+      "
+    />
+
+    <path
+      d="
+        M18 10
+        h.01
+      "
+    />
+
+    <path
+      d="
+        M17.3 5
+        H6.7
+        a4 4 0 0 0-3.8 2.7
+        L1.5 12
+        a4 4 0 0 0
+        6.8 3.9
+        L10 14
+        h4
+        l1.7 1.9
+        a4 4 0 0 0
+        6.8-3.9
+        l-1.4-4.3
+        A4 4 0 0 0
+        17.3 5
+        Z
+      "
+    />
+  </svg>
+);
+
 const IconDice = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -116,6 +178,75 @@ const IconDice = () => (
     <path d="M8 16h.01" />
     <path d="M16 16h.01" />
     <path d="M12 12h.01" />
+  </svg>
+);
+
+const IconLibrary = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path
+      d="
+        M4 19.5
+        A2.5 2.5 0 0 1
+        6.5 17
+        H20
+      "
+    />
+
+    <path
+      d="
+        M6.5 2
+        H20
+        v20
+        H6.5
+        A2.5 2.5 0 0 1
+        4 19.5
+        v-15
+        A2.5 2.5 0 0 1
+        6.5 2
+        Z
+      "
+    />
+  </svg>
+);
+
+const IconBeyblade = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle
+      cx="12"
+      cy="12"
+      r="8"
+    />
+
+    <circle
+      cx="12"
+      cy="12"
+      r="3"
+    />
+
+    <path d="M12 2v4" />
+    <path d="M12 18v4" />
+    <path d="M2 12h4" />
+    <path d="M18 12h4" />
   </svg>
 );
 
@@ -316,6 +447,14 @@ function Navbar() {
         </Link>
 
         <Link
+          to="/games"
+          className="nav-link"
+        >
+          <IconGames />
+          Jogos
+        </Link>
+
+        <Link
           to="/consoles"
           className="nav-link"
         >
@@ -332,11 +471,19 @@ function Navbar() {
         </Link>
 
         <Link
-          to="/sugestoes"
+          to="/library"
           className="nav-link"
         >
-          <IconSuggestion />
-          Sugestões
+          <IconLibrary />
+          Biblioteca
+        </Link>
+
+        <Link
+          to="/beyblade"
+          className="nav-link"
+        >
+          <IconBeyblade />
+          Beyblade
         </Link>
 
         <Link
@@ -345,6 +492,14 @@ function Navbar() {
         >
           <IconGhost />
           Pokémon
+        </Link>
+
+        <Link
+          to="/sugestoes"
+          className="nav-link"
+        >
+          <IconSuggestion />
+          Sugestões
         </Link>
 
         <Link
