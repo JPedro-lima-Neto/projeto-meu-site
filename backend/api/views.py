@@ -34,6 +34,7 @@ from rest_framework.permissions import (
 )
 
 from rest_framework.parsers import (
+    JSONParser,
     MultiPartParser,
     FormParser,
 )
@@ -69,6 +70,11 @@ from .models import (
     UserBeyAssistBlade,
     UserBeyLockChip,
     BeybladeRelease,
+    VGCMove,
+    VGCAbility,
+    VGCItem,
+    VGCTeam,
+    VGCPokemonBuild,
 )
 
 from .serializers import (
@@ -102,6 +108,11 @@ from .serializers import (
     UserBeyAssistBladeSerializer,
     UserBeyLockChipSerializer,
     BeybladeReleaseSerializer,
+    VGCMoveSerializer,
+    VGCAbilitySerializer,
+    VGCItemSerializer,
+    VGCTeamSerializer,
+    VGCPokemonBuildSerializer,
 )
 
 
@@ -1425,8 +1436,9 @@ class UserProfileViewSet(
     ]
 
     parser_classes = (
+        JSONParser,
         MultiPartParser,
-        FormParser
+        FormParser,
     )
 
     lookup_field = (
@@ -5053,6 +5065,254 @@ class BeybladeReleaseViewSet(
         if system:
             queryset = queryset.filter(
                 system__iexact=system
+            )
+
+        return queryset
+
+
+class VGCMoveViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = VGCMoveSerializer
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            VGCMove.objects
+            .all()
+            .order_by(
+                'display_name',
+                'name'
+            )
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search',
+                ''
+            )
+            .strip()
+        )
+
+        move_type = (
+            self.request
+            .query_params
+            .get(
+                'type',
+                ''
+            )
+            .strip()
+        )
+
+        damage_class = (
+            self.request
+            .query_params
+            .get(
+                'damage_class',
+                ''
+            )
+            .strip()
+        )
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(
+                    display_name__icontains=search
+                )
+                |
+                models.Q(
+                    name__icontains=search
+                )
+            )
+
+        if move_type:
+            queryset = queryset.filter(
+                move_type__iexact=move_type
+            )
+
+        if damage_class:
+            queryset = queryset.filter(
+                damage_class__iexact=damage_class
+            )
+
+        return queryset
+
+
+class VGCAbilityViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = VGCAbilitySerializer
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            VGCAbility.objects
+            .all()
+            .order_by(
+                'display_name',
+                'name'
+            )
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search',
+                ''
+            )
+            .strip()
+        )
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(
+                    display_name__icontains=search
+                )
+                |
+                models.Q(
+                    name__icontains=search
+                )
+            )
+
+        return queryset
+
+
+class VGCItemViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = VGCItemSerializer
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            VGCItem.objects
+            .all()
+            .order_by(
+                'display_name',
+                'name'
+            )
+        )
+
+        search = (
+            self.request
+            .query_params
+            .get(
+                'search',
+                ''
+            )
+            .strip()
+        )
+
+        if search:
+            queryset = queryset.filter(
+                models.Q(
+                    display_name__icontains=search
+                )
+                |
+                models.Q(
+                    name__icontains=search
+                )
+            )
+
+        return queryset
+
+
+class VGCTeamViewSet(
+    viewsets.ModelViewSet
+):
+    serializer_class = VGCTeamSerializer
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        return (
+            VGCTeam.objects
+            .filter(
+                user=self.request.user
+            )
+            .prefetch_related(
+                'pokemon_builds__pokemon',
+                'pokemon_builds__ability',
+                'pokemon_builds__item',
+                'pokemon_builds__move_1',
+                'pokemon_builds__move_2',
+                'pokemon_builds__move_3',
+                'pokemon_builds__move_4',
+            )
+            .order_by(
+                '-updated_at'
+            )
+        )
+
+
+class VGCPokemonBuildViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = (
+        VGCPokemonBuildSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    pagination_class = None
+
+    def get_queryset(self):
+        queryset = (
+            VGCPokemonBuild.objects
+            .filter(
+                team__user=self.request.user
+            )
+            .select_related(
+                'team',
+                'pokemon',
+                'ability',
+                'item',
+                'move_1',
+                'move_2',
+                'move_3',
+                'move_4',
+            )
+            .order_by(
+                'team_id',
+                'slot'
+            )
+        )
+
+        team_id = (
+            self.request
+            .query_params
+            .get(
+                'team'
+            )
+        )
+
+        if team_id:
+            queryset = queryset.filter(
+                team_id=team_id
             )
 
         return queryset

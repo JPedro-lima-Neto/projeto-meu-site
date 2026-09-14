@@ -17,6 +17,11 @@ def avatar_path(instance, filename):
         f"{filename}"
     )
 
+def pokemon_trainer_photo_path(instance, filename):
+    return (
+        f"pokemon_trainer_cards/user_{instance.user.id}/"
+        f"{filename}"
+    )
 
 def validate_half_step(value):
     if value is None:
@@ -269,6 +274,36 @@ class Pokemon(models.Model):
         null=True
     )
 
+    base_hp = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    base_attack = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    base_defense = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    base_special_attack = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    base_special_defense = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    base_speed = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
     def __str__(self):
         return self.name
 
@@ -276,47 +311,88 @@ class Pokemon(models.Model):
 class PokemonHallOfFame(models.Model):
     user = models.ForeignKey(
         User,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name='pokemon_hall_of_fame'
     )
 
     game_name = models.CharField(
         max_length=100
     )
 
-    sprite_1 = models.ImageField(
-        upload_to='teams/',
+    pokemon_1 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        null=True
+        related_name='+'
     )
 
-    sprite_2 = models.ImageField(
-        upload_to='teams/',
-        blank=True,
-        null=True
+    pokemon_1_shiny = models.BooleanField(
+        default=False
     )
 
-    sprite_3 = models.ImageField(
-        upload_to='teams/',
+    pokemon_2 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        null=True
+        related_name='+'
     )
 
-    sprite_4 = models.ImageField(
-        upload_to='teams/',
-        blank=True,
-        null=True
+    pokemon_2_shiny = models.BooleanField(
+        default=False
     )
 
-    sprite_5 = models.ImageField(
-        upload_to='teams/',
+    pokemon_3 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        null=True
+        related_name='+'
     )
 
-    sprite_6 = models.ImageField(
-        upload_to='teams/',
+    pokemon_3_shiny = models.BooleanField(
+        default=False
+    )
+
+    pokemon_4 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        null=True
+        related_name='+'
+    )
+
+    pokemon_4_shiny = models.BooleanField(
+        default=False
+    )
+
+    pokemon_5 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+'
+    )
+
+    pokemon_5_shiny = models.BooleanField(
+        default=False
+    )
+
+    pokemon_6 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+'
+    )
+
+    pokemon_6_shiny = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
     )
 
     def __str__(self):
@@ -352,6 +428,495 @@ class UserPokemon(models.Model):
             'user',
             'pokemon',
             'is_shiny'
+        )
+
+
+
+class VGCMove(models.Model):
+    api_id = models.PositiveIntegerField(
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    name = models.CharField(
+        max_length=120,
+        unique=True
+    )
+
+    display_name = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True
+    )
+
+    move_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    damage_class = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+
+    power = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    accuracy = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    pp = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    priority = models.SmallIntegerField(
+        default=0
+    )
+
+    effect = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    effect_chance = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True
+    )
+
+    generation = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Golpe VGC'
+        verbose_name_plural = 'Golpes VGC'
+
+    def __str__(self):
+        return (
+            self.display_name
+            or self.name
+        )
+
+
+class VGCAbility(models.Model):
+    api_id = models.PositiveIntegerField(
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    name = models.CharField(
+        max_length=120,
+        unique=True
+    )
+
+    display_name = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True
+    )
+
+    effect = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Habilidade VGC'
+        verbose_name_plural = 'Habilidades VGC'
+
+    def __str__(self):
+        return (
+            self.display_name
+            or self.name
+        )
+
+
+class VGCItem(models.Model):
+    api_id = models.PositiveIntegerField(
+        unique=True,
+        blank=True,
+        null=True
+    )
+
+    name = models.CharField(
+        max_length=120,
+        unique=True
+    )
+
+    display_name = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True
+    )
+
+    sprite_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    effect = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'name'
+        ]
+
+        verbose_name = 'Item VGC'
+        verbose_name_plural = 'Itens VGC'
+
+    def __str__(self):
+        return (
+            self.display_name
+            or self.name
+        )
+
+
+class VGCTeam(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='vgc_teams'
+    )
+
+    name = models.CharField(
+        max_length=100
+    )
+
+    regulation = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    notes = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            '-updated_at',
+            '-created_at'
+        ]
+
+        verbose_name = 'Equipe VGC'
+        verbose_name_plural = 'Equipes VGC'
+
+    def __str__(self):
+        return (
+            f"{self.name} "
+            f"({self.user.username})"
+        )
+
+
+class VGCPokemonBuild(models.Model):
+    NATURE_CHOICES = [
+        ('HARDY', 'Hardy'),
+        ('LONELY', 'Lonely'),
+        ('BRAVE', 'Brave'),
+        ('ADAMANT', 'Adamant'),
+        ('NAUGHTY', 'Naughty'),
+        ('BOLD', 'Bold'),
+        ('DOCILE', 'Docile'),
+        ('RELAXED', 'Relaxed'),
+        ('IMPISH', 'Impish'),
+        ('LAX', 'Lax'),
+        ('TIMID', 'Timid'),
+        ('HASTY', 'Hasty'),
+        ('SERIOUS', 'Serious'),
+        ('JOLLY', 'Jolly'),
+        ('NAIVE', 'Naive'),
+        ('MODEST', 'Modest'),
+        ('MILD', 'Mild'),
+        ('QUIET', 'Quiet'),
+        ('BASHFUL', 'Bashful'),
+        ('RASH', 'Rash'),
+        ('CALM', 'Calm'),
+        ('GENTLE', 'Gentle'),
+        ('SASSY', 'Sassy'),
+        ('CAREFUL', 'Careful'),
+        ('QUIRKY', 'Quirky'),
+    ]
+
+    team = models.ForeignKey(
+        VGCTeam,
+        on_delete=models.CASCADE,
+        related_name='pokemon_builds'
+    )
+
+    pokemon = models.ForeignKey(
+        Pokemon,
+        on_delete=models.PROTECT,
+        related_name='vgc_builds'
+    )
+
+    slot = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(6),
+        ]
+    )
+
+    nickname = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    is_shiny = models.BooleanField(
+        default=False
+    )
+
+    level = models.PositiveSmallIntegerField(
+        default=50,
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(100),
+        ]
+    )
+
+    tera_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    nature = models.CharField(
+        max_length=20,
+        choices=NATURE_CHOICES,
+        default='SERIOUS'
+    )
+
+    ability = models.ForeignKey(
+        VGCAbility,
+        on_delete=models.SET_NULL,
+        related_name='pokemon_builds',
+        blank=True,
+        null=True
+    )
+
+    item = models.ForeignKey(
+        VGCItem,
+        on_delete=models.SET_NULL,
+        related_name='pokemon_builds',
+        blank=True,
+        null=True
+    )
+
+    move_1 = models.ForeignKey(
+        VGCMove,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        blank=True,
+        null=True
+    )
+
+    move_2 = models.ForeignKey(
+        VGCMove,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        blank=True,
+        null=True
+    )
+
+    move_3 = models.ForeignKey(
+        VGCMove,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        blank=True,
+        null=True
+    )
+
+    move_4 = models.ForeignKey(
+        VGCMove,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        blank=True,
+        null=True
+    )
+
+    iv_hp = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    iv_attack = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    iv_defense = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    iv_special_attack = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    iv_special_defense = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    iv_speed = models.PositiveSmallIntegerField(
+        default=31,
+        validators=[
+            MaxValueValidator(31)
+        ]
+    )
+
+    ev_hp = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    ev_attack = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    ev_defense = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    ev_special_attack = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    ev_special_defense = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    ev_speed = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(252)
+        ]
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            'team_id',
+            'slot'
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'team',
+                    'slot'
+                ],
+                name='unique_vgc_team_slot'
+            )
+        ]
+
+        verbose_name = 'Build de Pokémon VGC'
+        verbose_name_plural = 'Builds de Pokémon VGC'
+
+    @property
+    def total_evs(self):
+        return (
+            self.ev_hp
+            + self.ev_attack
+            + self.ev_defense
+            + self.ev_special_attack
+            + self.ev_special_defense
+            + self.ev_speed
+        )
+
+    def clean(self):
+        super().clean()
+
+        if self.total_evs > 510:
+            raise ValidationError(
+                'A soma total dos EVs não pode ultrapassar 510.'
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"{self.team.name} - "
+            f"Slot {self.slot} - "
+            f"{self.pokemon.name}"
         )
 
 
@@ -1406,6 +1971,25 @@ class Comment(models.Model):
 
 
 class UserProfile(models.Model):
+    POKEMON_MECHANIC_CHOICES = [
+        (
+            'MEGA_EVOLUTION',
+            'Mega Evolução'
+        ),
+        (
+            'Z_MOVE',
+            'Z-Move'
+        ),
+        (
+            'DYNAMAX_GIGANTAMAX',
+            'Dynamax / Gigantamax'
+        ),
+        (
+            'TERASTAL',
+            'Terastal'
+        ),
+    ]
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -1420,6 +2004,78 @@ class UserProfile(models.Model):
         upload_to=avatar_path,
         blank=True,
         null=True
+    )
+
+    pokemon_trainer_photo = models.ImageField(
+        upload_to=pokemon_trainer_photo_path,
+        blank=True,
+        null=True
+    )
+
+    pokemon_trainer_photo_position = models.CharField(
+        max_length=50,
+        default='50% 50%'
+    )
+
+    pokemon_tcg_league_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    pokemon_favorite_mechanic = models.CharField(
+        max_length=30,
+        choices=POKEMON_MECHANIC_CHOICES,
+        blank=True,
+        null=True
+    )
+
+    pokemon_favorite_1 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
+    )
+
+    pokemon_favorite_2 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
+    )
+
+    pokemon_favorite_3 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
+    )
+
+    pokemon_favorite_4 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
+    )
+
+    pokemon_favorite_5 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
+    )
+
+    pokemon_favorite_6 = models.ForeignKey(
+        Pokemon,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='+'
     )
 
     bio = models.TextField(

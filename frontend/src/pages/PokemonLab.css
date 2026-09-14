@@ -1,0 +1,361 @@
+/* =========================================================
+   LABORATÓRIO POKÉMON
+   Estilos complementares sem alterar o restante da página
+========================================================= */
+
+.lab-dex-switcher {
+  width: min(560px, 100%);
+  margin: 0 auto 34px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  background: #17324d;
+  border: 4px solid #17324d;
+  box-shadow:
+    0 5px 0 #0d2234,
+    0 9px 18px rgba(23, 50, 77, 0.18);
+}
+
+.lab-dex-switcher button {
+  position: relative;
+  min-height: 62px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  color: #17324d;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.57rem;
+  line-height: 1.5;
+  background: #f6f0d7;
+  border: 0;
+  cursor: pointer;
+  box-shadow: inset 0 -4px 0 rgba(23, 50, 77, 0.14);
+  transition:
+    transform 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.lab-dex-switcher button::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  height: 3px;
+  opacity: 0;
+  background: currentColor;
+  transform: scaleX(0.45);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.lab-dex-switcher button:hover {
+  z-index: 2;
+  transform: translateY(-2px);
+  background: #fffdf0;
+  box-shadow:
+    inset 0 -4px 0 rgba(23, 50, 77, 0.12),
+    0 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+.lab-dex-switcher button:hover::after {
+  opacity: 0.45;
+  transform: scaleX(1);
+}
+
+.lab-dex-switcher button:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.lab-dex-switcher button.active {
+  transform: translateY(-1px);
+}
+
+.lab-dex-switcher button:first-child.active {
+  color: #f8f5dc;
+  background:
+    linear-gradient(
+      180deg,
+      #3b9568 0%,
+      #28704f 100%
+    );
+  box-shadow:
+    inset 0 -5px 0 #174b36,
+    inset 0 2px 0 rgba(255, 255, 255, 0.18);
+}
+
+.lab-dex-switcher button:last-child.active {
+  color: #493711;
+  background:
+    linear-gradient(
+      180deg,
+      #ffe99a 0%,
+      #e7bd4c 100%
+    );
+  box-shadow:
+    inset 0 -5px 0 #9b7620,
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+.lab-dex-switcher button.active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.lab-dex-switcher button svg {
+  flex: 0 0 auto;
+  filter: drop-shadow(1px 1px 0 rgba(255, 255, 255, 0.18));
+}
+
+.lab-dex-switcher button:last-child:not(.active) svg {
+  color: #a77c13;
+}
+
+.lab-dex-switcher button:first-child:not(.active) svg {
+  color: #28704f;
+}
+
+/* Estado do Pokémon registrado, usado pela etapa 1 */
+.register-label.registered-label {
+  color: #286f4d;
+}
+
+.dex-card.shiny .register-label.registered-label {
+  color: #8a6515;
+}
+
+/* Dá uma pista visual melhor de que os cards são clicáveis */
+.dex-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dex-card:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #527653;
+}
+
+.dex-card.caught:hover .register-label.registered-label {
+  text-decoration: underline;
+}
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+
+@media (max-width: 600px) {
+  .lab-dex-switcher {
+    width: 100%;
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .lab-dex-switcher button {
+    min-height: 56px;
+    padding: 9px 8px;
+    gap: 7px;
+    font-size: 0.46rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .lab-dex-switcher {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-dex-switcher button {
+    min-height: 52px;
+  }
+}
+.professor-cedro-intro {
+  width: min(980px, calc(100% - 24px));
+  margin: 8px auto 38px;
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) minmax(0, 1fr);
+  align-items: end;
+  gap: 22px;
+}
+
+.professor-cedro-character {
+  min-height: 285px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.professor-cedro-image {
+  display: block;
+  width: 100%;
+  max-width: 255px;
+  max-height: 330px;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: pixelated;
+  filter: drop-shadow(6px 7px 0 rgba(23, 50, 77, 0.16));
+}
+
+.professor-cedro-dialogue {
+  position: relative;
+  margin-bottom: 18px;
+  padding: 10px;
+  background: #17324d;
+  border: 4px solid #0d2234;
+  box-shadow:
+    6px 7px 0 rgba(13, 34, 52, 0.2);
+}
+
+.professor-cedro-dialogue::before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  bottom: 58px;
+  width: 0;
+  height: 0;
+  border-top: 17px solid transparent;
+  border-bottom: 17px solid transparent;
+  border-right: 25px solid #0d2234;
+}
+
+.professor-cedro-dialogue::after {
+  content: '';
+  position: absolute;
+  left: -17px;
+  bottom: 63px;
+  width: 0;
+  height: 0;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-right: 18px solid #f8f5dc;
+}
+
+.professor-cedro-name {
+  position: absolute;
+  top: -25px;
+  left: 20px;
+  z-index: 2;
+  padding: 8px 13px 7px;
+  color: #f8f5dc;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.58rem;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  background: #2f855b;
+  border: 3px solid #17324d;
+  box-shadow: 3px 3px 0 #0d2234;
+}
+
+.professor-cedro-message {
+  padding: 24px 25px 20px;
+  color: #263c48;
+  background: #f8f5dc;
+  border: 3px solid #d4cba7;
+  box-shadow:
+    inset 0 0 0 3px #fffdf0;
+}
+
+.professor-cedro-message p {
+  margin: 0 0 13px;
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.professor-cedro-message p:last-child {
+  margin-bottom: 0;
+}
+
+.professor-cedro-message strong {
+  color: #28704f;
+  font-weight: 900;
+}
+
+.professor-cedro-final-line {
+  padding-top: 12px;
+  color: #17324d;
+  font-weight: 900;
+  border-top: 2px dashed #b7ad89;
+}
+
+.professor-cedro-final-line::after {
+  content: '▼';
+  display: inline-block;
+  margin-left: 9px;
+  color: #2f855b;
+  font-size: 0.72rem;
+  animation: professor-dialogue-arrow 1s steps(2, end) infinite;
+}
+
+@keyframes professor-dialogue-arrow {
+  0%,
+  49% {
+    transform: translateY(0);
+  }
+
+  50%,
+  100% {
+    transform: translateY(3px);
+  }
+}
+
+@media (max-width: 760px) {
+  .professor-cedro-intro {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .professor-cedro-character {
+    min-height: 0;
+  }
+
+  .professor-cedro-image {
+    max-width: 210px;
+    max-height: 270px;
+  }
+
+  .professor-cedro-dialogue {
+    margin: 0;
+  }
+
+  .professor-cedro-dialogue::before,
+  .professor-cedro-dialogue::after {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .professor-cedro-intro {
+    width: 100%;
+  }
+
+  .professor-cedro-image {
+    max-width: 180px;
+  }
+
+  .professor-cedro-dialogue {
+    padding: 7px;
+    border-width: 3px;
+  }
+
+  .professor-cedro-name {
+    top: -22px;
+    left: 12px;
+    padding: 7px 9px 6px;
+    font-size: 0.49rem;
+  }
+
+  .professor-cedro-message {
+    padding: 22px 15px 15px;
+  }
+
+  .professor-cedro-message p {
+    font-size: 0.86rem;
+    line-height: 1.65;
+  }
+}

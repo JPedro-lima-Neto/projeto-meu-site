@@ -1,215 +1,731 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import {
+  Camera,
+  Check,
+  Dice5,
+  Edit3,
+  Eye,
+  Gamepad2,
+  LayoutDashboard,
+  LogOut,
+  Monitor,
+  Save,
+  UserRound,
+  X,
+} from 'lucide-react';
+
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { 
-    LogOut, Gamepad2, Dice5, Camera, 
-    LayoutDashboard, Monitor, Trophy, Plus, Check, X
-} from 'lucide-react';
+
 import './ProfilePage.css';
 
+const EMPTY_PROFILE = {
+  username: '',
+  avatar: null,
+  bio: '',
+  profile_views: 0,
+};
+
+const EMPTY_PORTFOLIO = {
+  videoGames: [],
+  boardGames: [],
+  consoles: [],
+};
+
 function ProfilePage() {
-    const { username } = useParams(); 
-    const fileInputRef = useRef(null);
-    const myUsername = localStorage.getItem('username');
-    
-    const isMyProfile = !username || username === myUsername;
-    const currentProfileUser = isMyProfile ? myUsername : username;
+  const { username } = useParams();
+  const fileInputRef = useRef(null);
 
-    const [profileData, setProfileData] = useState({ 
-        username: '', avatar: null, bio: '', profile_views: 0 
-    });
+  const myUsername = localStorage.getItem('username');
 
-    const [portfolio, setPortfolio] = useState({ videoGames: [], boardGames: [], consoles: [] });
-    const [activeTab, setActiveTab] = useState('overview'); 
-    const [loading, setLoading] = useState(true);
+  const isMyProfile = !username || username === myUsername;
+  const currentProfileUser = isMyProfile ? myUsername : username;
 
-    const [isEditingBio, setIsEditingBio] = useState(false);
-    const [tempBio, setTempBio] = useState("");
+  const [profileData, setProfileData] = useState(EMPTY_PROFILE);
+  const [portfolio, setPortfolio] = useState(EMPTY_PORTFOLIO);
 
-    const getImageUrl = (path) => { 
-        if (!path) return "https://via.placeholder.com/300x400?text=Sem+Imagem"; 
-        if (path.startsWith('http')) return path; 
-        return `http://127.0.0.1:8000${path}`; 
-    };
+  const [activeTab, setActiveTab] = useState('overview');
+  const [loading, setLoading] = useState(true);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [profileRes, gamesRes, boardRes, consoleRes] = await Promise.all([
-                    api.get(`profiles/${currentProfileUser}/`),
-                    api.get(`library/?username=${currentProfileUser}`),
-                    api.get(`boardgames/?username=${currentProfileUser}`),
-                    api.get(`consoles/?username=${currentProfileUser}`)
-                ]);
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [tempBio, setTempBio] = useState('');
+  const [bioSaving, setBioSaving] = useState(false);
 
-                const extract = (res) => Array.isArray(res.data) ? res.data : (res.data.results || []);
+  const [errorMessage, setErrorMessage] = useState('');
 
-                setProfileData(profileRes.data);
-                setTempBio(profileRes.data.bio || "");
+  const apiOrigin = useMemo(() => {
+    const baseURL = api.defaults?.baseURL;
 
-                setPortfolio({
-                    videoGames: extract(gamesRes),
-                    boardGames: extract(boardRes),
-                    consoles: extract(consoleRes)
-                });
-
-            } catch (error) {
-                console.error("Erro:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (currentProfileUser) fetchData();
-    }, [currentProfileUser]);
-
-    const handleLogout = () => {
-        localStorage.clear();
-        window.location.href = '/login';
-    };
-
-    if (loading) {
-        return (
-            <div className="profile-container">
-                <Navbar />
-                <div className="loading-state">Carregando perfil...</div>
-                <Footer />
-            </div>
-        );
+    if (!baseURL) {
+      return 'http://127.0.0.1:8000';
     }
 
+    return baseURL
+      .replace(/\/api\/?$/i, '')
+      .replace(/\/$/, '');
+  }, []);
+
+  const extractList = (response) => {
+    if (Array.isArray(response?.data)) {
+      return response.data;
+    }
+
+    return response?.data?.results || [];
+  };
+
+  const getImageUrl = (path, fallbackText = 'Sem imagem') => {
+    if (!path) {
+      return `https://placehold.co/500x500/18283b/f6f0d8?text=${encodeURIComponent(fallbackText)}`;
+    }
+
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+
+    return `${apiOrigin}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
+  const getGameTitle = (game) => {
     return (
-        <div className="profile-container">
-            <Navbar />
+      game?.game_catalog?.title ||
+      game?.game?.title ||
+      game?.title ||
+      'Jogo sem título'
+    );
+  };
 
-            <div className="profile-content">
+  const getGameImage = (game) => {
+    return (
+      game?.game_catalog?.cover_image ||
+      game?.game_catalog?.cover_url ||
+      game?.game?.cover_image ||
+      game?.cover_image ||
+      game?.cover_url ||
+      null
+    );
+  };
 
-                {/* HEADER */}
-                <div className="profile-header">
-                    
-                    <div 
-                        className="profile-avatar-container"
-                        onClick={() => isMyProfile && fileInputRef.current.click()}
-                    >
-                        <img 
-                            src={getImageUrl(profileData.avatar)} 
-                            alt="Avatar" 
-                            className="profile-avatar" 
-                        />
-                        {isMyProfile && (
-                            <div className="avatar-overlay">
-                                <Camera size={22} />
-                            </div>
-                        )}
-                    </div>
+  const getBoardGameName = (boardGame) => {
+    return (
+      boardGame?.game?.name ||
+      boardGame?.name ||
+      boardGame?.boardgame?.name ||
+      boardGame?.board_game?.name ||
+      'Board game sem título'
+    );
+  };
 
-                    <div className="profile-main-info">
-                        <h1>{profileData.username}</h1>
+  const getBoardGameImage = (boardGame) => {
+    return (
+      boardGame?.game?.cover_image ||
+      boardGame?.game?.cover_url ||
+      boardGame?.game?.thumbnail_url ||
+      boardGame?.cover_image ||
+      boardGame?.cover_url ||
+      boardGame?.boardgame?.cover_image ||
+      boardGame?.boardgame?.cover_url ||
+      boardGame?.board_game?.cover_image ||
+      null
+    );
+  };
 
-                        <div className="bio-section">
-                            {isEditingBio ? (
-                                <>
-                                    <textarea
-                                        value={tempBio}
-                                        onChange={(e) => setTempBio(e.target.value)}
-                                    />
-                                    <button 
-                                        onClick={async () => {
-                                            await api.patch(`profiles/${currentProfileUser}/`, { bio: tempBio });
-                                            setProfileData(prev => ({ ...prev, bio: tempBio }));
-                                            setIsEditingBio(false);
-                                        }}
-                                        className="btn-primary"
-                                    >
-                                        <Check size={16}/> Salvar
-                                    </button>
-                                </>
-                            ) : (
-                                <p>{profileData.bio || "Sem bio ainda..."}</p>
-                            )}
-                        </div>
+  const getConsoleName = (consoleItem) => {
+    return (
+      consoleItem?.name ||
+      consoleItem?.platform?.name ||
+      consoleItem?.console?.name ||
+      'Console'
+    );
+  };
 
-                        <div className="profile-stats">
-                            <div className="stat-card">
-                                <strong>{portfolio.videoGames.length}</strong>
-                                <span>Jogos</span>
-                            </div>
-                            <div className="stat-card">
-                                <strong>{portfolio.boardGames.length}</strong>
-                                <span>Boardgames</span>
-                            </div>
-                            <div className="stat-card">
-                                <strong>{portfolio.consoles.length}</strong>
-                                <span>Consoles</span>
-                            </div>
-                            <div className="stat-card">
-                                <strong>{profileData.profile_views}</strong>
-                                <span>Views</span>
-                            </div>
-                        </div>
+  const getConsoleImage = (consoleItem) => {
+    return (
+      consoleItem?.photo ||
+      consoleItem?.image ||
+      consoleItem?.platform_image ||
+      consoleItem?.platform?.platform_image ||
+      consoleItem?.console?.photo ||
+      null
+    );
+  };
 
-                    </div>
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!currentProfileUser) {
+        setLoading(false);
+        return;
+      }
 
-                    {isMyProfile && (
-                        <button className="logout-btn" onClick={handleLogout}>
-                            <LogOut size={18}/> Sair
-                        </button>
-                    )}
-                </div>
+      try {
+        setLoading(true);
+        setErrorMessage('');
 
-                {/* TABS */}
-                <div className="profile-tabs">
-                    <button onClick={() => setActiveTab('games')} className={activeTab==='games'?'active':''}>
-                        <Gamepad2 size={16}/> Jogos
-                    </button>
-                    <button onClick={() => setActiveTab('boardgames')} className={activeTab==='boardgames'?'active':''}>
-                        <Dice5 size={16}/> Tabuleiro
-                    </button>
-                    <button onClick={() => setActiveTab('consoles')} className={activeTab==='consoles'?'active':''}>
-                        <Monitor size={16}/> Consoles
-                    </button>
-                </div>
+        const [profileRes, gamesRes, boardRes, consoleRes] = await Promise.all([
+          api.get(`profiles/${currentProfileUser}/`),
+          api.get(`library/?username=${currentProfileUser}`),
+          api.get(`user-boardgames/?username=${currentProfileUser}`),
+          api.get(`consoles/?username=${currentProfileUser}`),
+        ]);
 
-                {/* GRID */}
-                <div className="profile-grid">
+        const receivedProfile = profileRes.data || EMPTY_PROFILE;
 
-                    {activeTab === 'games' && portfolio.videoGames.map(game => (
-                        <div key={game.id} className="profile-card">
-                            <img src={getImageUrl(game.game_catalog?.cover_image)} alt="" />
-                            <div className="overlay">
-                                <h4>{game.game_catalog?.title}</h4>
-                                <span>{game.rating || '-'}</span>
-                            </div>
-                        </div>
-                    ))}
+        setProfileData(receivedProfile);
+        setTempBio(receivedProfile.bio || '');
 
-                    {activeTab === 'boardgames' && portfolio.boardGames.map(bg => (
-                        <div key={bg.id} className="profile-card">
-                            <img src={getImageUrl(bg.cover_image)} alt="" />
-                            <div className="overlay">
-                                <h4>{bg.name}</h4>
-                            </div>
-                        </div>
-                    ))}
+        setPortfolio({
+          videoGames: extractList(gamesRes),
+          boardGames: extractList(boardRes),
+          consoles: extractList(consoleRes),
+        });
+      } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+        setErrorMessage('Não foi possível carregar este perfil.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-                    {activeTab === 'consoles' && portfolio.consoles.map(c => (
-                        <div key={c.id} className="profile-card">
-                            <img src={getImageUrl(c.photo)} alt="" />
-                            <div className="overlay">
-                                <h4>{c.name}</h4>
-                            </div>
-                        </div>
-                    ))}
+    fetchData();
+  }, [currentProfileUser]);
 
-                </div>
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/login';
+  };
 
+  const handleSaveBio = async () => {
+    try {
+      setBioSaving(true);
+      setErrorMessage('');
+
+      await api.patch(`profiles/${currentProfileUser}/`, {
+        bio: tempBio.trim(),
+      });
+
+      setProfileData((previous) => ({
+        ...previous,
+        bio: tempBio.trim(),
+      }));
+
+      setIsEditingBio(false);
+    } catch (error) {
+      console.error('Erro ao salvar bio:', error);
+      setErrorMessage('Não foi possível salvar sua bio.');
+    } finally {
+      setBioSaving(false);
+    }
+  };
+
+  const handleCancelBio = () => {
+    setTempBio(profileData.bio || '');
+    setIsEditingBio(false);
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Escolha um arquivo de imagem.');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setAvatarLoading(true);
+      setErrorMessage('');
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const response = await api.patch(
+        `profiles/${currentProfileUser}/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      setProfileData((previous) => ({
+        ...previous,
+        avatar: response.data?.avatar || previous.avatar,
+      }));
+    } catch (error) {
+      console.error('Erro ao atualizar avatar:', error);
+      setErrorMessage('Não foi possível atualizar sua foto de perfil.');
+    } finally {
+      setAvatarLoading(false);
+      event.target.value = '';
+    }
+  };
+
+  const totalItems =
+    portfolio.videoGames.length +
+    portfolio.boardGames.length +
+    portfolio.consoles.length;
+
+  const overviewItems = useMemo(() => {
+    return [
+      ...portfolio.videoGames.slice(0, 4).map((item) => ({
+        id: `game-${item.id}`,
+        type: 'Jogo',
+        title: getGameTitle(item),
+        image: getGameImage(item),
+      })),
+      ...portfolio.boardGames.slice(0, 2).map((item) => ({
+        id: `board-${item.id}`,
+        type: 'Board game',
+        title: getBoardGameName(item),
+        image: getBoardGameImage(item),
+      })),
+      ...portfolio.consoles.slice(0, 2).map((item) => ({
+        id: `console-${item.id}`,
+        type: 'Console',
+        title: getConsoleName(item),
+        image: getConsoleImage(item),
+      })),
+    ].slice(0, 8);
+  }, [portfolio]);
+
+  if (loading) {
+    return (
+      <div className="profile-page">
+        <Navbar />
+
+        <main className="profile-loading">
+          <div className="profile-loading-card">
+            <div className="profile-loading-avatar" />
+            <span>Carregando perfil...</span>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="profile-page">
+      <Navbar />
+
+      <main className="profile-content">
+        {errorMessage && (
+          <div className="profile-alert">
+            <span>{errorMessage}</span>
+            <button
+              type="button"
+              onClick={() => setErrorMessage('')}
+              aria-label="Fechar aviso"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
+        <section className="profile-header">
+          <div className="profile-avatar-column">
+            <button
+              type="button"
+              className={`profile-avatar-button ${isMyProfile ? 'is-editable' : ''}`}
+              onClick={() => {
+                if (isMyProfile && !avatarLoading) {
+                  fileInputRef.current?.click();
+                }
+              }}
+              aria-label={isMyProfile ? 'Alterar foto de perfil' : 'Foto de perfil'}
+            >
+              <img
+                src={getImageUrl(profileData.avatar, 'Avatar')}
+                alt={`Avatar de ${profileData.username}`}
+                className="profile-avatar"
+              />
+
+              {isMyProfile && (
+                <span className="profile-avatar-overlay">
+                  <Camera size={22} />
+                  <strong>
+                    {avatarLoading ? 'Enviando...' : 'Trocar foto'}
+                  </strong>
+                </span>
+              )}
+            </button>
+
+            {isMyProfile && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="profile-file-input"
+                onChange={handleAvatarChange}
+              />
+            )}
+          </div>
+
+          <div className="profile-main-info">
+            <div className="profile-title-row">
+              <div>
+                <span className="profile-eyebrow">
+                  {isMyProfile ? 'MEU PERFIL' : 'PERFIL DA COMUNIDADE'}
+                </span>
+
+                <h1>{profileData.username || currentProfileUser}</h1>
+              </div>
+
+              {isMyProfile && (
+                <button
+                  type="button"
+                  className="profile-logout-button"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={17} />
+                  Sair
+                </button>
+              )}
             </div>
 
-            <Footer />
-        </div>
-    );
+            <div className="profile-bio">
+              <div className="profile-section-heading">
+                <span>Sobre</span>
+
+                {isMyProfile && !isEditingBio && (
+                  <button
+                    type="button"
+                    className="profile-icon-button"
+                    onClick={() => setIsEditingBio(true)}
+                    aria-label="Editar bio"
+                  >
+                    <Edit3 size={16} />
+                  </button>
+                )}
+              </div>
+
+              {isEditingBio ? (
+                <div className="profile-bio-editor">
+                  <textarea
+                    value={tempBio}
+                    maxLength={300}
+                    placeholder="Conte um pouco sobre você e seu mundo geek..."
+                    onChange={(event) => setTempBio(event.target.value)}
+                  />
+
+                  <div className="profile-bio-editor-footer">
+                    <span>{tempBio.length} / 300</span>
+
+                    <div className="profile-bio-actions">
+                      <button
+                        type="button"
+                        className="profile-secondary-button"
+                        onClick={handleCancelBio}
+                        disabled={bioSaving}
+                      >
+                        <X size={16} />
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="profile-primary-button"
+                        onClick={handleSaveBio}
+                        disabled={bioSaving}
+                      >
+                        {bioSaving ? (
+                          <>
+                            <Save size={16} />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Check size={16} />
+                            Salvar
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p>
+                  {profileData.bio ||
+                    (isMyProfile
+                      ? 'Você ainda não escreveu uma bio. Clique no lápis para adicionar.'
+                      : 'Este usuário ainda não escreveu uma bio.')}
+                </p>
+              )}
+            </div>
+
+            <div className="profile-stats">
+              <article className="profile-stat-card">
+                <Gamepad2 size={20} />
+                <strong>{portfolio.videoGames.length}</strong>
+                <span>Jogos</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <Dice5 size={20} />
+                <strong>{portfolio.boardGames.length}</strong>
+                <span>Board games</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <Monitor size={20} />
+                <strong>{portfolio.consoles.length}</strong>
+                <span>Consoles</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <Eye size={20} />
+                <strong>{profileData.profile_views || 0}</strong>
+                <span>Visualizações</span>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="profile-dashboard-strip">
+          <div>
+            <LayoutDashboard size={20} />
+            <span>Itens registrados</span>
+            <strong>{totalItems}</strong>
+          </div>
+
+          <p>
+            {isMyProfile
+              ? 'Seu espaço reúne um resumo do que já faz parte do seu acervo.'
+              : `Veja um pouco do acervo de ${profileData.username || currentProfileUser}.`}
+          </p>
+        </section>
+
+        <nav className="profile-tabs" aria-label="Seções do perfil">
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className={activeTab === 'overview' ? 'active' : ''}
+          >
+            <LayoutDashboard size={17} />
+            Visão geral
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('games')}
+            className={activeTab === 'games' ? 'active' : ''}
+          >
+            <Gamepad2 size={17} />
+            Jogos
+            <span>{portfolio.videoGames.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('boardgames')}
+            className={activeTab === 'boardgames' ? 'active' : ''}
+          >
+            <Dice5 size={17} />
+            Tabuleiro
+            <span>{portfolio.boardGames.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('consoles')}
+            className={activeTab === 'consoles' ? 'active' : ''}
+          >
+            <Monitor size={17} />
+            Consoles
+            <span>{portfolio.consoles.length}</span>
+          </button>
+        </nav>
+
+        <section className="profile-tab-content">
+          {activeTab === 'overview' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>DESTAQUES</span>
+                  <h2>Um pouco do acervo</h2>
+                </div>
+
+                <UserRound size={24} />
+              </div>
+
+              {overviewItems.length > 0 ? (
+                <div className="profile-grid profile-grid-overview">
+                  {overviewItems.map((item) => (
+                    <article
+                      key={item.id}
+                      className="profile-card"
+                    >
+                      <img
+                        src={getImageUrl(item.image, item.title)}
+                        alt={item.title}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>{item.type}</span>
+                        <h3>{item.title}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <LayoutDashboard size={34} />
+                  <h3>Nada por aqui ainda</h3>
+                  <p>
+                    Quando itens forem adicionados ao acervo, eles aparecerão aqui.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'games' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>VIDEOGAMES</span>
+                  <h2>Jogos do acervo</h2>
+                </div>
+
+                <Gamepad2 size={24} />
+              </div>
+
+              {portfolio.videoGames.length > 0 ? (
+                <div className="profile-grid">
+                  {portfolio.videoGames.map((game) => (
+                    <article
+                      key={game.id}
+                      className="profile-card"
+                    >
+                      <img
+                        src={getImageUrl(
+                          getGameImage(game),
+                          getGameTitle(game)
+                        )}
+                        alt={getGameTitle(game)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>
+                          {game.rating
+                            ? `Nota ${game.rating}`
+                            : 'Videogame'}
+                        </span>
+
+                        <h3>{getGameTitle(game)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <Gamepad2 size={34} />
+                  <h3>Nenhum jogo encontrado</h3>
+                  <p>Os jogos adicionados ao acervo aparecerão aqui.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'boardgames' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>BOARD GAMES</span>
+                  <h2>Jogos de tabuleiro</h2>
+                </div>
+
+                <Dice5 size={24} />
+              </div>
+
+              {portfolio.boardGames.length > 0 ? (
+                <div className="profile-grid">
+                  {portfolio.boardGames.map((boardGame) => (
+                    <article
+                      key={boardGame.id}
+                      className="profile-card"
+                    >
+                      <img
+                        src={getImageUrl(
+                          getBoardGameImage(boardGame),
+                          getBoardGameName(boardGame)
+                        )}
+                        alt={getBoardGameName(boardGame)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>Board game</span>
+                        <h3>{getBoardGameName(boardGame)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <Dice5 size={34} />
+                  <h3>Nenhum board game encontrado</h3>
+                  <p>Seus jogos de tabuleiro aparecerão nesta área.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'consoles' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>HARDWARE</span>
+                  <h2>Consoles do acervo</h2>
+                </div>
+
+                <Monitor size={24} />
+              </div>
+
+              {portfolio.consoles.length > 0 ? (
+                <div className="profile-grid profile-console-grid">
+                  {portfolio.consoles.map((consoleItem) => (
+                    <article
+                      key={consoleItem.id}
+                      className="profile-card profile-console-card"
+                    >
+                      <img
+                        src={getImageUrl(
+                          getConsoleImage(consoleItem),
+                          getConsoleName(consoleItem)
+                        )}
+                        alt={getConsoleName(consoleItem)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>Console</span>
+                        <h3>{getConsoleName(consoleItem)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <Monitor size={34} />
+                  <h3>Nenhum console encontrado</h3>
+                  <p>Os consoles adicionados ao acervo aparecerão aqui.</p>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
 }
 
 export default ProfilePage;

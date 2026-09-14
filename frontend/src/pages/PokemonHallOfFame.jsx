@@ -6,6 +6,7 @@ import {
   Crown,
   Gamepad2,
   Medal,
+  Sparkles,
   Trophy,
 } from 'lucide-react';
 
@@ -13,10 +14,13 @@ import api from '../services/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
+import sabrina from '../assets/sabrina.png';
+
 import './PokemonHallOfFame.css';
 
 function HallOfFamePage() {
   const [pokemonGames, setPokemonGames] = useState([]);
+  const [hallOfFameEntries, setHallOfFameEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const getImageUrl = (img) => {
@@ -36,11 +40,27 @@ function HallOfFamePage() {
       try {
         setLoading(true);
 
-        const response = await api.get('library/');
-        const data = response.data.results || response.data;
+        const [
+          libraryResponse,
+          hallResponse,
+        ] = await Promise.all([
+          api.get('library/'),
+          api.get('hall-of-fame/'),
+        ]);
 
-        const games = data.filter((entry) => {
-          const game = entry.game_catalog || entry.game;
+        const libraryData =
+          libraryResponse.data.results ||
+          libraryResponse.data;
+
+        const hallData =
+          hallResponse.data.results ||
+          hallResponse.data;
+
+        const games = libraryData.filter((entry) => {
+          const game =
+            entry.game_catalog ||
+            entry.game;
+
           const title = game?.title || '';
 
           return (
@@ -50,8 +70,12 @@ function HallOfFamePage() {
         });
 
         setPokemonGames(games);
+        setHallOfFameEntries(hallData);
       } catch (error) {
-        console.error('Erro ao carregar Hall da Fama:', error);
+        console.error(
+          'Erro ao carregar Hall da Fama:',
+          error
+        );
       } finally {
         setLoading(false);
       }
@@ -61,13 +85,43 @@ function HallOfFamePage() {
   }, []);
 
   const hallEntries = useMemo(() => {
+    const hallById = new Map(
+      hallOfFameEntries.map((hall) => [
+        Number(hall.id),
+        hall,
+      ])
+    );
+
     return pokemonGames
       .map((entry) => {
-        const game = entry.game_catalog || entry.game;
-        const hall =
-          game?.hall_of_fame_entry ||
-          entry?.hall_of_fame_entry ||
-          null;
+        const game =
+          entry.game_catalog ||
+          entry.game;
+
+        const hallReference =
+          entry?.hall_of_fame;
+
+        let hall = null;
+
+        if (
+          hallReference &&
+          typeof hallReference === 'object'
+        ) {
+          hall = hallReference;
+        } else if (hallReference) {
+          hall =
+            hallById.get(
+              Number(hallReference)
+            ) ||
+            null;
+        }
+
+        if (!hall) {
+          hall =
+            game?.hall_of_fame_entry ||
+            entry?.hall_of_fame_entry ||
+            null;
+        }
 
         return {
           libraryEntry: entry,
@@ -76,7 +130,10 @@ function HallOfFamePage() {
         };
       })
       .filter((item) => item.hall);
-  }, [pokemonGames]);
+  }, [
+    pokemonGames,
+    hallOfFameEntries,
+  ]);
 
   const getHallDate = (hall) => {
     const rawDate =
@@ -99,44 +156,39 @@ function HallOfFamePage() {
   };
 
   const getTeam = (hall) => {
-    if (Array.isArray(hall?.team) && hall.team.length > 0) {
-      return hall.team.slice(0, 6).map((pokemon, index) => ({
-        id: pokemon.id || pokemon.pokedex_id || index,
-        name: pokemon.name || `Pokémon ${index + 1}`,
-        sprite:
-          pokemon.sprite_url ||
-          pokemon.sprite ||
-          pokemon.image ||
-          pokemon.image_url,
-      }));
-    }
-
     return [1, 2, 3, 4, 5, 6]
       .map((index) => {
         const pokemon =
-          hall?.[`pokemon_${index}`] ||
-          hall?.[`member_${index}`] ||
-          null;
+          hall?.[`pokemon_${index}`];
 
-        const sprite =
-          hall?.[`sprite_${index}`] ||
-          pokemon?.sprite_url ||
-          pokemon?.sprite ||
-          null;
-
-        const name =
-          hall?.[`pokemon_${index}_name`] ||
-          pokemon?.name ||
-          `Pokémon ${index}`;
-
-        if (!sprite && !pokemon) {
+        if (!pokemon) {
           return null;
         }
 
+        const isShiny =
+          Boolean(
+            hall?.[`pokemon_${index}_shiny`]
+          );
+
+        const sprite =
+          isShiny
+            ? (
+                pokemon.shiny_sprite_url ||
+                pokemon.sprite_url
+              )
+            : pokemon.sprite_url;
+
         return {
-          id: pokemon?.id || pokemon?.pokedex_id || index,
-          name,
+          id:
+            pokemon.pokedex_id ||
+            index,
+          pokedexId:
+            pokemon.pokedex_id,
+          name:
+            pokemon.name ||
+            `Pokémon ${index}`,
           sprite,
+          isShiny,
         };
       })
       .filter(Boolean);
@@ -153,7 +205,10 @@ function HallOfFamePage() {
           </div>
 
           <span>HALL DA FAMA</span>
-          <h2>Carregando seus campeões...</h2>
+
+          <h2>
+            Carregando seus campeões...
+          </h2>
         </main>
       </div>
     );
@@ -165,7 +220,10 @@ function HallOfFamePage() {
 
       <main className="hall-content">
         <div className="hall-topbar">
-          <Link to="/pokemon" className="hall-back-button">
+          <Link
+            to="/pokemon"
+            className="hall-back-button"
+          >
             <ArrowLeft size={18} />
             Voltar para a cidade
           </Link>
@@ -176,29 +234,90 @@ function HallOfFamePage() {
             <Crown size={42} />
           </div>
 
-          <span className="hall-eyebrow">SALÃO DOS CAMPEÕES</span>
+          <span className="hall-eyebrow">
+            SALÃO DOS CAMPEÕES
+          </span>
 
-          <h1>Hall da Fama</h1>
+          <h1>
+            Hall da Fama
+          </h1>
 
           <p>
-            As equipes que marcaram o fim de cada uma das suas
-            jornadas Pokémon ficam registradas aqui.
+            As equipes que marcaram o fim de cada uma
+            das suas jornadas Pokémon ficam
+            registradas aqui.
           </p>
 
           <div className="hall-summary">
             <div>
-              <strong>{hallEntries.length}</strong>
-              <span>Jornadas concluídas</span>
+              <strong>
+                {hallEntries.length}
+              </strong>
+
+              <span>
+                Jornadas concluídas
+              </span>
             </div>
 
             <div>
               <strong>
                 {hallEntries.reduce(
-                  (total, item) => total + getTeam(item.hall).length,
+                  (total, item) =>
+                    total +
+                    getTeam(item.hall).length,
                   0
                 )}
               </strong>
-              <span>Pokémon campeões</span>
+
+              <span>
+                Pokémon campeões
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section className="hall-sabrina-intro">
+          <div className="hall-sabrina-character">
+            <img
+              src={sabrina}
+              alt="Sabrina, anfitriã do Hall da Fama"
+              className="hall-sabrina-image"
+              draggable="false"
+            />
+          </div>
+
+          <div className="hall-sabrina-dialogue">
+            <div className="hall-sabrina-name">
+              SABRINA
+            </div>
+
+            <div className="hall-sabrina-message">
+              <p>
+                Ora, ora... parece que temos um novo campeão diante de nós.
+                Seja muito bem-vindo ao <strong>Hall da Fama</strong>.
+              </p>
+
+              <p>
+                Eu sou Sabrina, responsável por preservar as histórias dos
+                treinadores que conseguiram chegar até aqui.
+              </p>
+
+              <p>
+                Vitórias são importantes, é claro... mas os Pokémon que
+                estiveram ao seu lado durante a jornada são o que tornam cada
+                conquista verdadeiramente inesquecível.
+              </p>
+
+              <p>
+                Escolha a jornada que deseja eternizar e apresente o time que
+                esteve com você até o fim. A partir daqui, eles farão parte da
+                sua história.
+              </p>
+
+              <p>
+                Afinal... <strong>uma vitória pode durar alguns instantes.
+                Um legado permanece para sempre.</strong>
+              </p>
             </div>
           </div>
         </section>
@@ -209,132 +328,197 @@ function HallOfFamePage() {
               <Trophy size={70} />
             </div>
 
-            <span>NENHUM REGISTRO</span>
+            <span>
+              NENHUM REGISTRO
+            </span>
 
-            <h2>Seu Hall da Fama ainda está vazio</h2>
+            <h2>
+              Seu Hall da Fama ainda está vazio
+            </h2>
 
             <p>
-              Quando uma jornada Pokémon for registrada como concluída,
-              a equipe campeã aparecerá neste salão.
+              Registre uma equipe campeã no Game
+              Center para ela aparecer neste salão.
             </p>
 
-            <Link to="/pokemon" className="hall-empty-button">
+            <Link
+              to="/pokemon"
+              className="hall-empty-button"
+            >
               <Gamepad2 size={19} />
               Voltar para minhas jornadas
             </Link>
           </section>
         ) : (
           <section className="hall-grid">
-            {hallEntries.map(({ libraryEntry, game, hall }, entryIndex) => {
-              const team = getTeam(hall);
+            {hallEntries.map(
+              (
+                {
+                  libraryEntry,
+                  game,
+                  hall,
+                },
+                entryIndex
+              ) => {
+                const team =
+                  getTeam(hall);
 
-              return (
-                <article
-                  className="hall-champion-card"
-                  key={libraryEntry?.id || game?.id || entryIndex}
-                >
-                  <div className="hall-card-header">
-                    <div className="hall-rank">
-                      <Medal size={18} />
-                      CAMPEÃO #{String(entryIndex + 1).padStart(2, '0')}
-                    </div>
+                return (
+                  <article
+                    className="hall-champion-card"
+                    key={
+                      hall?.id ||
+                      libraryEntry?.id ||
+                      game?.id ||
+                      entryIndex
+                    }
+                  >
+                    <div className="hall-card-header">
+                      <div className="hall-rank">
+                        <Medal size={18} />
 
-                    <div className="hall-date">
-                      <CalendarDays size={16} />
-                      {getHallDate(hall)}
-                    </div>
-                  </div>
+                        CAMPEÃO #
+                        {String(
+                          entryIndex + 1
+                        ).padStart(2, '0')}
+                      </div>
 
-                  <div className="hall-card-body">
-                    <div className="hall-game-cover">
-                      <img
-                        src={getImageUrl(
-                          game?.cover_image || game?.cover_url
-                        )}
-                        alt={game?.title || 'Jogo Pokémon'}
-                      />
-
-                      <div className="hall-cover-badge">
-                        <Trophy size={16} />
-                        HALL OF FAME
+                      <div className="hall-date">
+                        <CalendarDays size={16} />
+                        {getHallDate(hall)}
                       </div>
                     </div>
 
-                    <div className="hall-card-info">
-                      <span className="hall-game-label">
-                        JORNADA CONCLUÍDA
-                      </span>
+                    <div className="hall-card-body">
+                      <div className="hall-game-cover">
+                        <img
+                          src={getImageUrl(
+                            game?.cover_image ||
+                            game?.cover_url
+                          )}
+                          alt={
+                            game?.title ||
+                            hall?.game_name ||
+                            'Jogo Pokémon'
+                          }
+                        />
 
-                      <h2>{game?.title || 'Pokémon'}</h2>
-
-                      {hall?.region && (
-                        <p className="hall-region">
-                          Região de {hall.region}
-                        </p>
-                      )}
-
-                      <div className="hall-divider" />
-
-                      <span className="hall-team-label">
-                        EQUIPE CAMPEÃ
-                      </span>
-
-                      <div className="hall-team">
-                        {[0, 1, 2, 3, 4, 5].map((slotIndex) => {
-                          const member = team[slotIndex];
-
-                          return (
-                            <div
-                              className={[
-                                'hall-team-slot',
-                                member ? 'filled' : 'empty',
-                              ].join(' ')}
-                              key={slotIndex}
-                            >
-                              {member ? (
-                                <>
-                                  <div className="hall-pokemon-sprite">
-                                    {member.sprite ? (
-                                      <img
-                                        src={member.sprite}
-                                        alt={member.name}
-                                      />
-                                    ) : (
-                                      <span>?</span>
-                                    )}
-                                  </div>
-
-                                  <span>{member.name}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="hall-pokemon-sprite">
-                                    <span>?</span>
-                                  </div>
-
-                                  <span>Vazio</span>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {(hall?.notes || hall?.memory || hall?.description) && (
-                        <div className="hall-memory">
-                          <span>MEMÓRIA DA JORNADA</span>
-                          <p>
-                            {hall.notes ||
-                              hall.memory ||
-                              hall.description}
-                          </p>
+                        <div className="hall-cover-badge">
+                          <Trophy size={16} />
+                          HALL OF FAME
                         </div>
-                      )}
+                      </div>
+
+                      <div className="hall-card-info">
+                        <span className="hall-game-label">
+                          JORNADA CONCLUÍDA
+                        </span>
+
+                        <h2>
+                          {game?.title ||
+                            hall?.game_name ||
+                            'Pokémon'}
+                        </h2>
+
+                        <div className="hall-divider" />
+
+                        <span className="hall-team-label">
+                          EQUIPE CAMPEÃ
+                        </span>
+
+                        <div className="hall-team">
+                          {[0, 1, 2, 3, 4, 5].map(
+                            (slotIndex) => {
+                              const member =
+                                team[slotIndex];
+
+                              return (
+                                <div
+                                  className={[
+                                    'hall-team-slot',
+                                    member
+                                      ? 'filled'
+                                      : 'empty',
+                                    member?.isShiny
+                                      ? 'shiny'
+                                      : '',
+                                  ].join(' ')}
+                                  key={slotIndex}
+                                >
+                                  {member ? (
+                                    <>
+                                      <div className="hall-pokemon-sprite">
+                                        {member.sprite ? (
+                                          <img
+                                            src={
+                                              member.sprite
+                                            }
+                                            alt={
+                                              member.name
+                                            }
+                                          />
+                                        ) : (
+                                          <span>
+                                            ?
+                                          </span>
+                                        )}
+
+                                        {member.isShiny && (
+                                          <div
+                                            className="hall-shiny-mark"
+                                            title="Shiny"
+                                          >
+                                            <Sparkles
+                                              size={14}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <span>
+                                        {member.name}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="hall-pokemon-sprite">
+                                        <span>
+                                          ?
+                                        </span>
+                                      </div>
+
+                                      <span>
+                                        Vazio
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+
+                        {(hall?.notes ||
+                          hall?.memory ||
+                          hall?.description) && (
+                          <div className="hall-memory">
+                            <span>
+                              MEMÓRIA DA JORNADA
+                            </span>
+
+                            <p>
+                              {hall.notes ||
+                                hall.memory ||
+                                hall.description}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              );
-            })}
+                  </article>
+                );
+              }
+            )}
           </section>
         )}
       </main>

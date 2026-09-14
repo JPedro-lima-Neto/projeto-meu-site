@@ -35,6 +35,11 @@ from .views import (
     UserBeyAssistBladeViewSet,
     UserBeyLockChipViewSet,
     BeybladeReleaseViewSet,
+    VGCMoveViewSet,
+    VGCAbilityViewSet,
+    VGCItemViewSet,
+    VGCTeamViewSet,
+    VGCPokemonBuildViewSet,
     CustomAuthToken,
 )
 
@@ -114,6 +119,36 @@ router.register(
     r'hall-of-fame',
     PokemonHallOfFameViewSet,
     basename='hall-of-fame'
+)
+
+router.register(
+    r'vgc-moves',
+    VGCMoveViewSet,
+    basename='vgc-moves'
+)
+
+router.register(
+    r'vgc-abilities',
+    VGCAbilityViewSet,
+    basename='vgc-abilities'
+)
+
+router.register(
+    r'vgc-items',
+    VGCItemViewSet,
+    basename='vgc-items'
+)
+
+router.register(
+    r'vgc-teams',
+    VGCTeamViewSet,
+    basename='vgc-teams'
+)
+
+router.register(
+    r'vgc-pokemon-builds',
+    VGCPokemonBuildViewSet,
+    basename='vgc-pokemon-builds'
 )
 
 router.register(

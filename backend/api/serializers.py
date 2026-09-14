@@ -38,6 +38,11 @@ from .models import (
     UserBeyLockChip,
     BeybladeBuild,
     BeybladeRelease,
+    VGCMove,
+    VGCAbility,
+    VGCItem,
+    VGCTeam,
+    VGCPokemonBuild,
 )
 
 
@@ -134,13 +139,26 @@ class UserProfileSerializer(
         fields = [
             'username',
             'avatar',
+
+            'pokemon_trainer_photo',
+            'pokemon_trainer_photo_position',
+
+            'pokemon_tcg_league_id',
+            'pokemon_favorite_mechanic',
+
+            'pokemon_favorite_1',
+            'pokemon_favorite_2',
+            'pokemon_favorite_3',
+            'pokemon_favorite_4',
+            'pokemon_favorite_5',
+            'pokemon_favorite_6',
+
             'bio',
             'favorite_game',
             'is_public',
             'avatar_position',
             'profile_views',
         ]
-
 
 class AchievementSerializer(
     serializers.ModelSerializer
@@ -470,49 +488,97 @@ class UserOwnedGameSerializer(
         )
 
 
+class PokemonHallPokemonSerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = Pokemon
+
+        fields = [
+            'pokedex_id',
+            'name',
+            'sprite_url',
+            'shiny_sprite_url',
+        ]
+
+        read_only_fields = fields
+
+
 class PokemonHallOfFameSerializer(
     serializers.ModelSerializer
 ):
-    username = (
-        serializers.CharField(
-            source='user.username',
-            read_only=True
-        )
+    username = serializers.CharField(
+        source='user.username',
+        read_only=True
     )
 
-    game_title = (
-        serializers.CharField(
-            source='game_name',
-            required=False
-        )
+    game_title = serializers.CharField(
+        source='game_name',
+        required=False
     )
 
-    sprite_1 = serializers.ImageField(
+    pokemon_1 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_1_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_1',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
 
-    sprite_2 = serializers.ImageField(
+    pokemon_2 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_2_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_2',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
 
-    sprite_3 = serializers.ImageField(
+    pokemon_3 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_3_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_3',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
 
-    sprite_4 = serializers.ImageField(
+    pokemon_4 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_4_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_4',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
 
-    sprite_5 = serializers.ImageField(
+    pokemon_5 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_5_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_5',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
 
-    sprite_6 = serializers.ImageField(
+    pokemon_6 = PokemonHallPokemonSerializer(
+        read_only=True
+    )
+    pokemon_6_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon_6',
+        queryset=Pokemon.objects.all(),
+        write_only=True,
         required=False,
         allow_null=True
     )
@@ -526,17 +592,32 @@ class PokemonHallOfFameSerializer(
             'username',
             'game_name',
             'game_title',
-            'sprite_1',
-            'sprite_2',
-            'sprite_3',
-            'sprite_4',
-            'sprite_5',
-            'sprite_6',
+            'pokemon_1',
+            'pokemon_1_id',
+            'pokemon_1_shiny',
+            'pokemon_2',
+            'pokemon_2_id',
+            'pokemon_2_shiny',
+            'pokemon_3',
+            'pokemon_3_id',
+            'pokemon_3_shiny',
+            'pokemon_4',
+            'pokemon_4_id',
+            'pokemon_4_shiny',
+            'pokemon_5',
+            'pokemon_5_id',
+            'pokemon_5_shiny',
+            'pokemon_6',
+            'pokemon_6_id',
+            'pokemon_6_shiny',
+            'created_at',
         ]
 
         read_only_fields = [
+            'id',
             'user',
             'username',
+            'created_at',
         ]
 
         extra_kwargs = {
@@ -549,23 +630,48 @@ class PokemonHallOfFameSerializer(
         self,
         attrs
     ):
-        game_name = (
-            attrs.get(
-                'game_name'
+        game_name = attrs.get(
+            'game_name',
+            getattr(
+                self.instance,
+                'game_name',
+                None
             )
         )
 
-        if (
-            not game_name
-            and self.instance is None
-        ):
+        if not game_name:
             raise serializers.ValidationError(
                 {
-                    'game_title':
-                        (
-                            'Informe o nome '
-                            'do jogo.'
-                        )
+                    'game_title': (
+                        'Informe o nome do jogo.'
+                    )
+                }
+            )
+
+        selected_pokemon = []
+
+        for index in range(1, 7):
+            field_name = f'pokemon_{index}'
+
+            pokemon = attrs.get(
+                field_name,
+                getattr(
+                    self.instance,
+                    field_name,
+                    None
+                )
+            )
+
+            if pokemon is not None:
+                selected_pokemon.append(pokemon)
+
+        if not selected_pokemon:
+            raise serializers.ValidationError(
+                {
+                    'pokemon_1_id': (
+                        'Escolha pelo menos um Pokémon '
+                        'para o Hall da Fama.'
+                    )
                 }
             )
 
@@ -575,12 +681,8 @@ class PokemonHallOfFameSerializer(
         self,
         validated_data
     ):
-        validated_data[
-            'user'
-        ] = (
-            self.context[
-                'request'
-            ].user
+        validated_data['user'] = (
+            self.context['request'].user
         )
 
         return super().create(
@@ -942,6 +1044,629 @@ class UserPokemonSerializer(
             validated_data
         )
 
+
+
+class VGCMoveSerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = VGCMove
+
+        fields = [
+            'id',
+            'api_id',
+            'name',
+            'display_name',
+            'move_type',
+            'damage_class',
+            'power',
+            'accuracy',
+            'pp',
+            'priority',
+            'effect',
+            'effect_chance',
+            'generation',
+            'updated_at',
+        ]
+
+        read_only_fields = fields
+
+
+class VGCAbilitySerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = VGCAbility
+
+        fields = [
+            'id',
+            'api_id',
+            'name',
+            'display_name',
+            'effect',
+            'updated_at',
+        ]
+
+        read_only_fields = fields
+
+
+class VGCItemSerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = VGCItem
+
+        fields = [
+            'id',
+            'api_id',
+            'name',
+            'display_name',
+            'sprite_url',
+            'effect',
+            'updated_at',
+        ]
+
+        read_only_fields = fields
+
+
+class VGCPokemonSerializer(
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = Pokemon
+
+        fields = [
+            'pokedex_id',
+            'name',
+            'sprite_url',
+            'shiny_sprite_url',
+            'type1',
+            'type2',
+            'base_hp',
+            'base_attack',
+            'base_defense',
+            'base_special_attack',
+            'base_special_defense',
+            'base_speed',
+        ]
+
+        read_only_fields = fields
+
+
+class VGCPokemonBuildSerializer(
+    serializers.ModelSerializer
+):
+    pokemon = VGCPokemonSerializer(
+        read_only=True
+    )
+
+    pokemon_id = serializers.PrimaryKeyRelatedField(
+        source='pokemon',
+        queryset=Pokemon.objects.all(),
+        write_only=True
+    )
+
+    ability = VGCAbilitySerializer(
+        read_only=True
+    )
+
+    ability_id = serializers.PrimaryKeyRelatedField(
+        source='ability',
+        queryset=VGCAbility.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    item = VGCItemSerializer(
+        read_only=True
+    )
+
+    item_id = serializers.PrimaryKeyRelatedField(
+        source='item',
+        queryset=VGCItem.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    move_1 = VGCMoveSerializer(
+        read_only=True
+    )
+
+    move_1_id = serializers.PrimaryKeyRelatedField(
+        source='move_1',
+        queryset=VGCMove.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    move_2 = VGCMoveSerializer(
+        read_only=True
+    )
+
+    move_2_id = serializers.PrimaryKeyRelatedField(
+        source='move_2',
+        queryset=VGCMove.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    move_3 = VGCMoveSerializer(
+        read_only=True
+    )
+
+    move_3_id = serializers.PrimaryKeyRelatedField(
+        source='move_3',
+        queryset=VGCMove.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    move_4 = VGCMoveSerializer(
+        read_only=True
+    )
+
+    move_4_id = serializers.PrimaryKeyRelatedField(
+        source='move_4',
+        queryset=VGCMove.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+
+    nature_display = serializers.CharField(
+        source='get_nature_display',
+        read_only=True
+    )
+
+    total_evs = serializers.IntegerField(
+        read_only=True
+    )
+
+    final_stats = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VGCPokemonBuild
+
+        fields = [
+            'id',
+            'team',
+            'pokemon',
+            'pokemon_id',
+            'slot',
+            'nickname',
+            'is_shiny',
+            'level',
+            'tera_type',
+            'nature',
+            'nature_display',
+            'ability',
+            'ability_id',
+            'item',
+            'item_id',
+            'move_1',
+            'move_1_id',
+            'move_2',
+            'move_2_id',
+            'move_3',
+            'move_3_id',
+            'move_4',
+            'move_4_id',
+            'iv_hp',
+            'iv_attack',
+            'iv_defense',
+            'iv_special_attack',
+            'iv_special_defense',
+            'iv_speed',
+            'ev_hp',
+            'ev_attack',
+            'ev_defense',
+            'ev_special_attack',
+            'ev_special_defense',
+            'ev_speed',
+            'total_evs',
+            'final_stats',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'team',
+            'pokemon',
+            'ability',
+            'item',
+            'move_1',
+            'move_2',
+            'move_3',
+            'move_4',
+            'nature_display',
+            'total_evs',
+            'final_stats',
+            'created_at',
+            'updated_at',
+        ]
+
+    def validate_slot(
+        self,
+        value
+    ):
+        if value < 1 or value > 6:
+            raise serializers.ValidationError(
+                'O slot deve estar entre 1 e 6.'
+            )
+
+        return value
+
+    def validate(
+        self,
+        attrs
+    ):
+        instance = self.instance
+
+        ev_fields = [
+            'ev_hp',
+            'ev_attack',
+            'ev_defense',
+            'ev_special_attack',
+            'ev_special_defense',
+            'ev_speed',
+        ]
+
+        total_evs = 0
+
+        for field in ev_fields:
+            value = attrs.get(
+                field,
+                getattr(
+                    instance,
+                    field,
+                    0
+                )
+                if instance
+                else 0
+            )
+
+            if value > 252:
+                raise serializers.ValidationError(
+                    {
+                        field: (
+                            'Cada atributo pode receber '
+                            'no máximo 252 EVs.'
+                        )
+                    }
+                )
+
+            total_evs += value
+
+        if total_evs > 510:
+            raise serializers.ValidationError(
+                {
+                    'evs': (
+                        'A soma total dos EVs '
+                        'não pode ultrapassar 510.'
+                    )
+                }
+            )
+
+        iv_fields = [
+            'iv_hp',
+            'iv_attack',
+            'iv_defense',
+            'iv_special_attack',
+            'iv_special_defense',
+            'iv_speed',
+        ]
+
+        for field in iv_fields:
+            value = attrs.get(
+                field,
+                getattr(
+                    instance,
+                    field,
+                    31
+                )
+                if instance
+                else 31
+            )
+
+            if value > 31:
+                raise serializers.ValidationError(
+                    {
+                        field: (
+                            'Cada IV pode ter '
+                            'no máximo 31 pontos.'
+                        )
+                    }
+                )
+
+        return attrs
+
+    def get_final_stats(
+        self,
+        obj
+    ):
+        pokemon = obj.pokemon
+
+        if not pokemon:
+            return None
+
+        base_stats = {
+            'hp': pokemon.base_hp,
+            'attack': pokemon.base_attack,
+            'defense': pokemon.base_defense,
+            'special_attack': pokemon.base_special_attack,
+            'special_defense': pokemon.base_special_defense,
+            'speed': pokemon.base_speed,
+        }
+
+        if any(
+            value is None
+            for value in base_stats.values()
+        ):
+            return None
+
+        level = obj.level or 50
+
+        if pokemon.pokedex_id == 292:
+            hp = 1
+        else:
+            hp = (
+                (
+                    (
+                        2 * base_stats['hp']
+                        + obj.iv_hp
+                        + (obj.ev_hp // 4)
+                    )
+                    * level
+                )
+                // 100
+            ) + level + 10
+
+        nature_modifiers = {
+            'LONELY': ('attack', 'defense'),
+            'BRAVE': ('attack', 'speed'),
+            'ADAMANT': ('attack', 'special_attack'),
+            'NAUGHTY': ('attack', 'special_defense'),
+            'BOLD': ('defense', 'attack'),
+            'RELAXED': ('defense', 'speed'),
+            'IMPISH': ('defense', 'special_attack'),
+            'LAX': ('defense', 'special_defense'),
+            'TIMID': ('speed', 'attack'),
+            'HASTY': ('speed', 'defense'),
+            'JOLLY': ('speed', 'special_attack'),
+            'NAIVE': ('speed', 'special_defense'),
+            'MODEST': ('special_attack', 'attack'),
+            'MILD': ('special_attack', 'defense'),
+            'QUIET': ('special_attack', 'speed'),
+            'RASH': ('special_attack', 'special_defense'),
+            'CALM': ('special_defense', 'attack'),
+            'GENTLE': ('special_defense', 'defense'),
+            'SASSY': ('special_defense', 'speed'),
+            'CAREFUL': ('special_defense', 'special_attack'),
+        }
+
+        increase_stat = None
+        decrease_stat = None
+
+        if obj.nature in nature_modifiers:
+            (
+                increase_stat,
+                decrease_stat
+            ) = nature_modifiers[obj.nature]
+
+        def calculate_stat(
+            base,
+            iv,
+            ev,
+            stat_name
+        ):
+            value = (
+                (
+                    (
+                        2 * base
+                        + iv
+                        + (ev // 4)
+                    )
+                    * level
+                )
+                // 100
+            ) + 5
+
+            if stat_name == increase_stat:
+                value = (value * 110) // 100
+
+            elif stat_name == decrease_stat:
+                value = (value * 90) // 100
+
+            return value
+
+        return {
+            'hp': hp,
+            'attack': calculate_stat(
+                base_stats['attack'],
+                obj.iv_attack,
+                obj.ev_attack,
+                'attack'
+            ),
+            'defense': calculate_stat(
+                base_stats['defense'],
+                obj.iv_defense,
+                obj.ev_defense,
+                'defense'
+            ),
+            'special_attack': calculate_stat(
+                base_stats['special_attack'],
+                obj.iv_special_attack,
+                obj.ev_special_attack,
+                'special_attack'
+            ),
+            'special_defense': calculate_stat(
+                base_stats['special_defense'],
+                obj.iv_special_defense,
+                obj.ev_special_defense,
+                'special_defense'
+            ),
+            'speed': calculate_stat(
+                base_stats['speed'],
+                obj.iv_speed,
+                obj.ev_speed,
+                'speed'
+            ),
+        }
+
+
+class VGCTeamSerializer(
+    serializers.ModelSerializer
+):
+    username = serializers.CharField(
+        source='user.username',
+        read_only=True
+    )
+
+    pokemon_builds = VGCPokemonBuildSerializer(
+        many=True,
+        required=False
+    )
+
+    pokemon_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VGCTeam
+
+        fields = [
+            'id',
+            'user',
+            'username',
+            'name',
+            'regulation',
+            'notes',
+            'pokemon_count',
+            'pokemon_builds',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'user',
+            'username',
+            'pokemon_count',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_pokemon_count(
+        self,
+        obj
+    ):
+        return obj.pokemon_builds.count()
+
+    def validate_pokemon_builds(
+        self,
+        value
+    ):
+        if len(value) > 6:
+            raise serializers.ValidationError(
+                'Uma equipe VGC pode ter no máximo 6 Pokémon.'
+            )
+
+        slots = [
+            build['slot']
+            for build in value
+        ]
+
+        if len(slots) != len(set(slots)):
+            raise serializers.ValidationError(
+                'Não é possível repetir o mesmo slot na equipe.'
+            )
+
+        return value
+
+    def create(
+        self,
+        validated_data
+    ):
+        builds_data = validated_data.pop(
+            'pokemon_builds',
+            []
+        )
+
+        validated_data['user'] = (
+            self.context['request'].user
+        )
+
+        team = VGCTeam.objects.create(
+            **validated_data
+        )
+
+        for build_data in builds_data:
+            VGCPokemonBuild.objects.create(
+                team=team,
+                **build_data
+            )
+
+        return team
+
+    def update(
+        self,
+        instance,
+        validated_data
+    ):
+        builds_data = validated_data.pop(
+            'pokemon_builds',
+            None
+        )
+
+        for attr, value in validated_data.items():
+            setattr(
+                instance,
+                attr,
+                value
+            )
+
+        instance.save()
+
+        if builds_data is not None:
+            existing_by_slot = {
+                build.slot: build
+                for build in instance.pokemon_builds.all()
+            }
+
+            received_slots = set()
+
+            for build_data in builds_data:
+                slot = build_data['slot']
+                received_slots.add(slot)
+
+                build = existing_by_slot.get(slot)
+
+                if build:
+                    for attr, value in build_data.items():
+                        setattr(
+                            build,
+                            attr,
+                            value
+                        )
+
+                    build.save()
+                else:
+                    VGCPokemonBuild.objects.create(
+                        team=instance,
+                        **build_data
+                    )
+
+            instance.pokemon_builds.exclude(
+                slot__in=received_slots
+            ).delete()
+
+        return instance
+
+
 class LibraryCatalogSerializer(
     serializers.ModelSerializer
 ):
@@ -999,6 +1724,7 @@ class LibraryCatalogSerializer(
             'imported_at',
             'updated_at',
         ]
+
 
 class UserLibraryEntrySerializer(
     serializers.ModelSerializer
@@ -1145,6 +1871,87 @@ class UserLibraryEntrySerializer(
         )
 
 
+class BeyBladeVariantInlineSerializer(
+    serializers.ModelSerializer
+):
+    display_image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BeyBladeVariant
+
+        fields = [
+            'id',
+            'variant_name',
+            'edition_name',
+            'colors',
+            'source_code',
+            'catalog_key',
+            'is_default',
+            'image',
+            'image_url',
+            'display_image',
+            'notes',
+        ]
+
+        read_only_fields = [
+            'id',
+            'display_image',
+        ]
+
+    def get_display_image(
+        self,
+        obj
+    ):
+        if obj.image:
+            request = self.context.get(
+                'request'
+            )
+
+            try:
+                url = obj.image.url
+            except Exception:
+                url = None
+
+            if (
+                url
+                and request
+            ):
+                return request.build_absolute_uri(
+                    url
+                )
+
+            return url
+
+        if obj.image_url:
+            return obj.image_url
+
+        if obj.blade:
+            if obj.blade.image:
+                request = self.context.get(
+                    'request'
+                )
+
+                try:
+                    url = obj.blade.image.url
+                except Exception:
+                    url = None
+
+                if (
+                    url
+                    and request
+                ):
+                    return request.build_absolute_uri(
+                        url
+                    )
+
+                if url:
+                    return url
+
+            return obj.blade.image_url
+
+        return None
+
+
 class BeyBladeSerializer(
     serializers.ModelSerializer
 ):
@@ -1155,6 +1962,11 @@ class BeyBladeSerializer(
 
     spin_display = serializers.CharField(
         source='get_spin_display',
+        read_only=True
+    )
+
+    variants = BeyBladeVariantInlineSerializer(
+        many=True,
         read_only=True
     )
 
@@ -1172,6 +1984,7 @@ class BeyBladeSerializer(
             'weight',
             'image',
             'image_url',
+            'variants',
             'notes',
             'created_at',
             'updated_at',
@@ -1181,11 +1994,11 @@ class BeyBladeSerializer(
             'id',
             'bey_type_display',
             'spin_display',
+            'variants',
             'created_at',
             'updated_at',
         ]
-
-
+        
 class BeyRatchetSerializer(
     serializers.ModelSerializer
 ):
