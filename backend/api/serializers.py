@@ -15,6 +15,7 @@ from .models import (
     BoardGameCatalog,
     UserBoardGame,
     UserProfile,
+    ProfileLike,
     Achievement,
     Follow,
     Like,
@@ -43,6 +44,7 @@ from .models import (
     VGCItem,
     VGCTeam,
     VGCPokemonBuild,
+    Post,
 )
 
 
@@ -133,6 +135,9 @@ class UserProfileSerializer(
         read_only=True
     )
 
+    profile_likes_count = serializers.SerializerMethodField()
+    liked_by_me = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
 
@@ -158,7 +163,41 @@ class UserProfileSerializer(
             'is_public',
             'avatar_position',
             'profile_views',
+            'profile_likes_count',
+            'liked_by_me',
         ]
+
+        read_only_fields = [
+            'username',
+            'profile_views',
+            'profile_likes_count',
+            'liked_by_me',
+        ]
+
+    def get_profile_likes_count(
+        self,
+        obj
+    ):
+        return obj.profile_likes.count()
+
+    def get_liked_by_me(
+        self,
+        obj
+    ):
+        request = self.context.get(
+            'request'
+        )
+
+        if (
+            not request
+            or not request.user.is_authenticated
+        ):
+            return False
+
+        return obj.profile_likes.filter(
+            user=request.user
+        ).exists()
+
 
 class AchievementSerializer(
     serializers.ModelSerializer
@@ -3980,3 +4019,57 @@ class BeybladeReleaseSerializer(
             return obj.blade.image_url
 
         return None
+
+class PostSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(
+        source='author.username',
+        read_only=True
+    )
+
+    category_display = serializers.CharField(
+        source='get_category_display',
+        read_only=True
+    )
+
+    class Meta:
+        model = Post
+
+        fields = [
+            'id',
+            'author',
+            'author_username',
+            'title',
+            'slug',
+            'category',
+            'category_display',
+            'excerpt',
+            'content',
+            'cover_image',
+            'cover_url',
+            'is_published',
+            'is_featured',
+            'published_at',
+            'created_at',
+            'updated_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'author',
+            'author_username',
+            'category_display',
+            'created_at',
+            'updated_at',
+        ]
+
+    def create(
+        self,
+        validated_data
+    ):
+        validated_data['author'] = (
+            self.context['request'].user
+        )
+
+        return super().create(
+            validated_data
+        )

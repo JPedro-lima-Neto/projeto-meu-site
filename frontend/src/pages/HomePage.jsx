@@ -52,7 +52,14 @@ function HomePage() {
   const navigate = useNavigate();
 
   const [videoGames, setVideoGames] = useState([]);
+  const [boardGames, setBoardGames] = useState([]);
   const [popularProfiles, setPopularProfiles] = useState([]);
+  const [communityStats, setCommunityStats] = useState({
+    users: 0,
+    game_collectors: 0,
+    games_in_collections: 0,
+    boardgames_in_collections: 0,
+  });
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,52 +105,51 @@ function HomePage() {
         setLoading(true);
 
         const results = await Promise.allSettled([
-          api.get('library/'),
-          api.get('profiles/?ordering=-profile_views'),
-          api.get('posts/?ordering=-published_at,-created_at'),
+          api.get('home/'),
+          api.get('posts/'),
         ]);
 
-        const gamesResult = results[0];
-        const profilesResult = results[1];
-        const postsResult = results[2];
+        const homeResult = results[0];
+        const postsResult = results[1];
 
-        if (gamesResult.status === 'fulfilled') {
-          const rawGames = extractList(gamesResult.value);
+        if (homeResult.status === 'fulfilled') {
+          const homeData = homeResult.value?.data || {};
 
-          const formattedGames = rawGames.map((entry) => {
-            const gameData =
-              entry.game_catalog ||
-              entry.game ||
-              {};
+          const formattedGames = (homeData.top_games || []).map((game) => ({
+            id: game.id,
+            title: game.title || 'Jogo sem título',
+            image: game.cover_url || null,
+            collectors: Number(game.collectors || 0),
+            platform:
+              game.platforms?.map((platform) => platform.name).filter(Boolean).join(', ') ||
+              'Videogame',
+          }));
 
-            return {
-              id: entry.id,
-              title: gameData.title || 'Jogo sem título',
-              image:
-                gameData.cover_image ||
-                gameData.cover_url ||
-                null,
-              score: Number(entry.rating || 0),
-              genre: gameData.genre || 'Games',
-              platform:
-                gameData.platform?.name ||
-                gameData.platform ||
-                entry.platform?.name ||
-                'Videogame',
-              description:
-                gameData.description ||
-                entry.review ||
-                'Uma experiência que faz parte do meu acervo geek.',
-            };
-          });
+          const formattedBoardGames = (homeData.top_boardgames || []).map((game) => ({
+            id: game.id,
+            title: game.name || game.original_name || 'Board game sem título',
+            image:
+              game.cover_image ||
+              game.cover_url ||
+              game.thumbnail_url ||
+              null,
+            collectors: Number(game.collectors || 0),
+            year: game.year || null,
+          }));
 
           setVideoGames(formattedGames);
-        }
-
-        if (profilesResult.status === 'fulfilled') {
-          setPopularProfiles(
-            extractList(profilesResult.value).slice(0, 6)
-          );
+          setBoardGames(formattedBoardGames);
+          setPopularProfiles(homeData.featured_profiles || []);
+          setCommunityStats({
+            users: Number(homeData.stats?.users || 0),
+            game_collectors: Number(homeData.stats?.game_collectors || 0),
+            games_in_collections: Number(homeData.stats?.games_in_collections || 0),
+            boardgames_in_collections: Number(homeData.stats?.boardgames_in_collections || 0),
+          });
+        } else {
+          setVideoGames([]);
+          setBoardGames([]);
+          setPopularProfiles([]);
         }
 
         if (postsResult.status === 'fulfilled') {
@@ -170,21 +176,11 @@ function HomePage() {
   };
 
   const publishedPosts = useMemo(() => {
-    return posts.filter((post) => {
-      if (typeof post.published === 'boolean') {
-        return post.published;
-      }
-
-      if (post.status) {
-        return String(post.status).toUpperCase() !== 'DRAFT';
-      }
-
-      return true;
-    });
+    return posts.filter((post) => post.is_published !== false);
   }, [posts]);
 
   const featuredPost =
-    publishedPosts.find((post) => post.featured) ||
+    publishedPosts.find((post) => post.is_featured) ||
     publishedPosts[0] ||
     null;
 
@@ -192,13 +188,8 @@ function HomePage() {
     .filter((post) => post.id !== featuredPost?.id)
     .slice(0, 6);
 
-  const sortedGames = useMemo(() => {
-    return [...videoGames]
-      .filter((game) => game.score > 0)
-      .sort((a, b) => b.score - a.score);
-  }, [videoGames]);
-
-  const top3Games = sortedGames.slice(0, 3);
+  const top3Games = videoGames.slice(0, 3);
+  const top3BoardGames = boardGames.slice(0, 3);
 
   const getPostCategory = (post) => {
     const category =
@@ -252,7 +243,7 @@ function HomePage() {
       key: 'REVIEW',
       title: 'Reviews',
       description:
-        'Opiniões sobre jogos, consoles, board games e itens que realmente fazem parte do acervo.',
+        'Opiniões sobre jogos, consoles, board games e itens do universo geek.',
       icon: Star,
     },
     {
@@ -280,7 +271,7 @@ function HomePage() {
       key: 'COLLECTION',
       title: 'Diário do Acervo',
       description:
-        'Novas aquisições, itens que chegaram e mudanças importantes na coleção.',
+        'Novas aquisições, coleções da comunidade e descobertas que merecem destaque.',
       icon: PackageOpen,
     },
     {
@@ -300,7 +291,7 @@ function HomePage() {
         <main className="home-loading">
           <div className="home-loading-card">
             <Sparkles size={28} />
-            <span>Carregando seu universo geek...</span>
+            <span>Carregando o universo geek...</span>
           </div>
         </main>
 
@@ -317,18 +308,18 @@ function HomePage() {
         <section className="home-hero">
           <div className="home-hero-content">
             <span className="home-kicker">
-              MEU UNIVERSO GEEK
+              UNIVERSO GEEK
             </span>
 
             <h1>
-              Um lugar para guardar,
+              Seu universo geek,
               <br />
-              jogar, testar e contar histórias.
+              reunido em um só lugar.
             </h1>
 
             <p>
-              Jogos, board games, Pokémon, Beyblade, coleções,
-              reviews, ideias e projetos reunidos em um único espaço.
+              Descubra jogos, board games, Pokémon, Beyblade,
+              publicações e coleções compartilhadas pela comunidade.
             </p>
 
             <form
@@ -358,7 +349,7 @@ function HomePage() {
                 onClick={() => navigate('/games')}
               >
                 <Gamepad2 size={18} />
-                Explorar acervo
+                Explorar jogos
               </button>
 
               <a
@@ -373,14 +364,14 @@ function HomePage() {
 
           <div className="home-hero-panel">
             <span className="home-panel-label">
-              O QUE TEM POR AQUI?
+              A COMUNIDADE POR AQUI
             </span>
 
             <div className="home-panel-grid">
               <div>
                 <Gamepad2 size={24} />
-                <strong>{videoGames.length}</strong>
-                <span>Jogos</span>
+                <strong>{communityStats.games_in_collections}</strong>
+                <span>Jogos nas coleções</span>
               </div>
 
               <div>
@@ -391,14 +382,14 @@ function HomePage() {
 
               <div>
                 <Users size={24} />
-                <strong>{popularProfiles.length}</strong>
+                <strong>{communityStats.users}</strong>
                 <span>Exploradores</span>
               </div>
 
               <div>
                 <Trophy size={24} />
-                <strong>{top3Games.length}</strong>
-                <span>Destaques</span>
+                <strong>{communityStats.boardgames_in_collections}</strong>
+                <span>Board games</span>
               </div>
             </div>
           </div>
@@ -412,7 +403,7 @@ function HomePage() {
             <div className="home-section-heading">
               <div>
                 <span>CONTEÚDO EM DESTAQUE</span>
-                <h2>Geek News & Publicações</h2>
+                <h2>Publicações em destaque</h2>
               </div>
 
               <Link
@@ -495,13 +486,12 @@ function HomePage() {
                 <div>
                   <span>ÁREA EDITORIAL</span>
                   <h3>
-                    As próximas histórias do acervo vão aparecer aqui.
+                    As próximas histórias do universo geek vão aparecer aqui.
                   </h3>
 
                   <p>
-                    Reviews, indicações, combos de Beyblade,
-                    conteúdo Pokémon, projetos e novidades do site
-                    podem ser publicados nesta área.
+                    Reviews, indicações, Pokémon, Beyblade,
+                    projetos e novidades do site serão publicados nesta área.
                   </p>
                 </div>
               </div>
@@ -512,7 +502,7 @@ function HomePage() {
             <div className="home-section-heading">
               <div>
                 <span>EDITORIAS</span>
-                <h2>O que pode aparecer na Home</h2>
+                <h2>Explore nossos conteúdos</h2>
               </div>
             </div>
 
@@ -554,8 +544,8 @@ function HomePage() {
             <section className="home-ranking-section">
               <div className="home-section-heading">
                 <div>
-                  <span>RANKING PESSOAL</span>
-                  <h2>Meu Top Games</h2>
+                  <span>DESTAQUES DA COMUNIDADE</span>
+                  <h2>Jogos mais colecionados</h2>
                 </div>
 
                 <Trophy size={25} />
@@ -581,8 +571,8 @@ function HomePage() {
                       <h3>{game.title}</h3>
 
                       <div>
-                        <Star size={15} />
-                        {game.score}
+                        <Users size={15} />
+                        {game.collectors} {game.collectors === 1 ? 'colecionador' : 'colecionadores'}
                       </div>
                     </div>
                   </article>
@@ -591,77 +581,56 @@ function HomePage() {
             </section>
           )}
 
-          <section className="home-ideas-section">
-            <div className="home-section-heading">
-              <div>
-                <span>FORMATOS DE CONTEÚDO</span>
-                <h2>Ideias para alimentar a Home</h2>
+          {top3BoardGames.length > 0 && (
+            <section className="home-ranking-section">
+              <div className="home-section-heading">
+                <div>
+                  <span>DESTAQUES DA COMUNIDADE</span>
+                  <h2>Board games mais colecionados</h2>
+                </div>
+
+                <Dice5 size={25} />
               </div>
-            </div>
 
-            <div className="home-ideas-grid">
-              <article>
-                <span>01</span>
-                <h3>Review do acervo</h3>
-                <p>
-                  Avaliações de jogos, consoles, board games,
-                  decks ou qualquer item que você realmente tenha usado.
-                </p>
-              </article>
+              <div className="home-ranking-grid">
+                {top3BoardGames.map((game, index) => (
+                  <article
+                    className={`home-ranking-card place-${index + 1}`}
+                    key={game.id}
+                  >
+                    <div className="home-ranking-number">
+                      #{index + 1}
+                    </div>
 
-              <article>
-                <span>02</span>
-                <h3>Combo da semana</h3>
-                <p>
-                  Uma build de Beyblade, por que ela funciona,
-                  peças utilizadas e contra o que ela se sai melhor.
-                </p>
-              </article>
+                    <img
+                      src={getImageUrl(game.image, game.title)}
+                      alt={game.title}
+                    />
 
-              <article>
-                <span>03</span>
-                <h3>Vale a pena?</h3>
-                <p>
-                  Conteúdos curtos sobre compras, lançamentos,
-                  acessórios e itens que chamaram sua atenção.
-                </p>
-              </article>
+                    <div className="home-ranking-content">
+                      <span>
+                        {game.year ? `Lançado em ${game.year}` : 'Board game'}
+                      </span>
 
-              <article>
-                <span>04</span>
-                <h3>Diário de jornada</h3>
-                <p>
-                  Momentos de uma jogatina, time campeão,
-                  progresso em Pokémon ou uma experiência marcante.
-                </p>
-              </article>
+                      <h3>{game.title}</h3>
 
-              <article>
-                <span>05</span>
-                <h3>Top listas</h3>
-                <p>
-                  Rankings pessoais: favoritos, surpresas,
-                  decepções, melhores compras ou próximos objetivos.
-                </p>
-              </article>
-
-              <article>
-                <span>06</span>
-                <h3>Dev Log</h3>
-                <p>
-                  Novas funções do Meu Acervo, bastidores,
-                  mapas, pixel arts e evolução do próprio projeto.
-                </p>
-              </article>
-            </div>
-          </section>
+                      <div>
+                        <Users size={15} />
+                        {game.collectors} {game.collectors === 1 ? 'colecionador' : 'colecionadores'}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           {popularProfiles.length > 0 && (
             <section className="home-community-section">
               <div className="home-section-heading">
                 <div>
                   <span>COMUNIDADE</span>
-                  <h2>Exploradores Geek</h2>
+                  <h2>Perfis em destaque</h2>
                 </div>
 
                 <Users size={25} />
@@ -687,7 +656,7 @@ function HomePage() {
 
                       <span>
                         <Eye size={14} />
-                        {profile.profile_views || 0} views
+                        {profile.profile_views || 0} visualizações
                       </span>
                     </div>
                   </Link>

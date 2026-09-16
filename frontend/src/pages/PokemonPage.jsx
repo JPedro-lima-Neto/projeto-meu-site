@@ -41,6 +41,9 @@ import professorCedro from '../assets/professor.png';
 import liderDragao from '../assets/lider.png';
 import nik from '../assets/nik.png';
 import campeaoKael from '../assets/campeao.png';
+import mia from '../assets/mia.png';
+import flora from '../assets/flora.png';
+import mercadoSprite from '../assets/mercado.png';
 
 import './PokemonPage.css';
 import './PokemonLab.css';
@@ -1749,6 +1752,13 @@ const handleCopyTrainerPrompt = async () => {
               draggable="false"
             />
 
+            <img
+              src={mercadoSprite}
+              alt=""
+              className="map-building-sprite mercado-building-sprite"
+              draggable="false"
+            />
+
             <div className="pokemon-world-hud">
               <div className="world-hud-title">
                 <Map size={18} />
@@ -1864,6 +1874,19 @@ const handleCopyTrainerPrompt = async () => {
             >
               <span>
                 Centro VGC
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="map-hotspot hotspot-market"
+              onClick={() =>
+                openSection('tcg')
+              }
+              aria-label="Entrar na Central TCG"
+            >
+              <span>
+                Central TCG
               </span>
             </button>
 
@@ -2009,6 +2032,16 @@ const handleCopyTrainerPrompt = async () => {
             >
               <Swords size={22} />
               Centro VGC
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                openSection('tcg')
+              }
+            >
+              <Star size={22} />
+              Central TCG
             </button>
 
             <Link to="/pokemon/hall-of-fame">
@@ -3509,36 +3542,138 @@ const handleCopyTrainerPrompt = async () => {
 
   const renderPokemonCenter = () => {
     return (
-      <main className="pokemon-content-section">
+      <main className="pokemon-content-section pokemon-npc-page pokemon-recovery-page">
         {renderBackButton()}
 
         <section className="section-title">
-          <span>
-            CENTRO POKÉMON
-          </span>
-
-          <h1>
-            Centro Pokémon
-          </h1>
-
+          <span>CENTRO POKÉMON</span>
+          <h1>Centro de Recuperação</h1>
           <p>
-            Este local está livre para receber uma função
-            própria depois.
+            Um lugar de descanso, cuidado e hospitalidade para Pokémon e treinadores.
           </p>
         </section>
 
-        <div className="coming-soon-panel">
-          <Sparkles size={72} />
+        <section className="pokemon-npc-intro pokemon-center-intro">
+          <div className="pokemon-npc-character">
+            <img
+              src={flora}
+              alt="Dona Flora, cuidadora do Centro de Recuperação"
+              draggable="false"
+            />
+          </div>
 
-          <h2>
-            Em breve
-          </h2>
+          <div className="pokemon-npc-dialogue">
+            <span className="pokemon-npc-name">DONA FLORA</span>
+            <h2>Hospitalidade também é uma forma de cuidado.</h2>
 
+            <p>
+              Prontinho, querido. Seus Pokémon podem descansar por aqui.
+              E nada de esquecer de descansar também, viu?
+            </p>
+
+            <p>
+              Dona Flora cuida de Pokémon há décadas. Seu parceiro é Sinistcha,
+              cuja habilidade Hospitality combina perfeitamente com a forma
+              acolhedora com que os dois recebem cada treinador.
+            </p>
+
+            <div className="pokemon-npc-quote">
+              “Deixe seus Pokémon comigo, querido. Sinistcha, coloque a água para
+              esquentar. Nosso treinador também parece precisar recuperar um pouco de HP.”
+            </div>
+          </div>
+        </section>
+
+        <section className="pokemon-location-cards">
+          <article>
+            <Sparkles size={30} />
+            <h3>Recuperação</h3>
+            <p>O ponto de descanso da sua jornada Pokémon.</p>
+          </article>
+
+          <article>
+            <BookOpen size={30} />
+            <h3>Conselhos da Dona Flora</h3>
+            <p>Um espaço acolhedor para dicas de cuidado e histórias da cidade.</p>
+          </article>
+
+          <article>
+            <Star size={30} />
+            <h3>Sinistcha</h3>
+            <p>O parceiro de Dona Flora representa a hospitalidade do Centro.</p>
+          </article>
+        </section>
+      </main>
+    );
+  };
+
+  const renderTcg = () => {
+    return (
+      <main className="pokemon-content-section pokemon-npc-page tcg-page">
+        {renderBackButton()}
+
+        <section className="section-title">
+          <span>CENTRAL TCG</span>
+          <h1>Mercado TCG</h1>
           <p>
-            A Shiny Dex agora fica no Laboratório,
-            junto da Pokédex.
+            Cartas, coleções, decks e aquele brilho no olho quando aparece uma carta especial.
           </p>
-        </div>
+        </section>
+
+        <section className="pokemon-npc-intro tcg-intro">
+          <div className="pokemon-npc-character">
+            <img
+              src={mia}
+              alt="Mia, especialista da Central TCG"
+              draggable="false"
+            />
+          </div>
+
+          <div className="pokemon-npc-dialogue">
+            <span className="pokemon-npc-name">MIA</span>
+            <h2>Todo Pokémon é o favorito de alguém!</h2>
+
+            <p>
+              O meu é o Ledyba! Você coleciona também? Espera só até eu pegar meu fichário!
+            </p>
+
+            <p>
+              Mia é a pequena especialista da Central TCG. Ela entende de decks,
+              raridades, estratégias e coleções, mas acredita que a melhor carta
+              nem sempre é a mais cara ou a mais forte.
+            </p>
+
+            <p>
+              Para Mia, cada fichário conta uma história e todo Pokémon pode ser especial para alguém.
+            </p>
+
+            <div className="pokemon-npc-quote">
+              “Uma carta não precisa estar no meta para ser a sua favorita!”
+            </div>
+          </div>
+        </section>
+
+        <section className="pokemon-location-cards">
+          <article>
+            <BookOpen size={30} />
+            <h3>Minha Coleção TCG</h3>
+            <p>Espaço preparado para organizar suas cartas e acompanhar sua coleção.</p>
+          </article>
+
+          <article>
+            <Swords size={30} />
+            <h3>Decks</h3>
+            <p>Área preparada para montar e guardar seus decks favoritos.</p>
+          </article>
+
+          <article>
+            <Star size={30} />
+            <h3>Favoritos da Mia</h3>
+            <p>
+              Cartas e Pokémon não precisam ser os mais populares para serem especiais para alguém.
+            </p>
+          </article>
+        </section>
       </main>
     );
   };
@@ -5114,6 +5249,9 @@ const handleCopyTrainerPrompt = async () => {
 
       case 'pokemon-center':
         return renderPokemonCenter();
+
+      case 'tcg':
+        return renderTcg();
 
       case 'gym':
         return renderGym();

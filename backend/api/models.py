@@ -2103,6 +2103,44 @@ class UserProfile(models.Model):
         return self.user.username
 
 
+class ProfileLike(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile_likes_given'
+    )
+
+    profile = models.ForeignKey(
+        UserProfile,
+        on_delete=models.CASCADE,
+        related_name='profile_likes'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'user',
+                    'profile',
+                ],
+                name='unique_profile_like'
+            )
+        ]
+        ordering = [
+            '-created_at'
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.user.username} curtiu "
+            f"{self.profile.user.username}"
+        )
+
+
 class Achievement(models.Model):
     user = models.ForeignKey(
         User,
@@ -4099,3 +4137,89 @@ class BeybladeRelease(models.Model):
             f"{prefix} - "
             f"{label}"
         )
+
+class Post(models.Model):
+    CATEGORY_CHOICES = [
+        ('NEWS', 'Notícias / Novidades'),
+        ('REVIEW', 'Reviews'),
+        ('RECOMMENDATION', 'Indicações'),
+        ('BEYBLADE', 'Beyblade'),
+        ('POKEMON', 'Pokémon'),
+        ('BOARDGAME', 'Jogos de tabuleiro'),
+        ('GUIDE', 'Guias'),
+        ('COLLECTION', 'Diário do acervo'),
+        ('PROJECT', 'Projetos pessoais'),
+    ]
+
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='posts'
+    )
+
+    title = models.CharField(
+        max_length=220
+    )
+
+    slug = models.SlugField(
+        max_length=250,
+        unique=True
+    )
+
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default='NEWS'
+    )
+
+    excerpt = models.TextField(
+        max_length=500,
+        blank=True
+    )
+
+    content = models.TextField()
+
+    cover_image = models.ImageField(
+        upload_to='posts/covers/',
+        blank=True,
+        null=True
+    )
+
+    cover_url = models.URLField(
+        max_length=1000,
+        blank=True,
+        null=True
+    )
+
+    is_published = models.BooleanField(
+        default=False
+    )
+
+    is_featured = models.BooleanField(
+        default=False
+    )
+
+    published_at = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = [
+            '-published_at',
+            '-created_at'
+        ]
+
+        verbose_name = 'Publicação'
+        verbose_name_plural = 'Publicações'
+
+    def __str__(self):
+        return self.title

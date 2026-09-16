@@ -4,6 +4,7 @@ import html
 import time
 import xml.etree.ElementTree as ET
 from django.db import models
+from django.db.models import Count
 
 import requests
 
@@ -52,6 +53,7 @@ from .models import (
     BoardGameCatalog,
     UserBoardGame,
     UserProfile,
+    ProfileLike,
     Achievement,
     Follow,
     Like,
@@ -75,6 +77,7 @@ from .models import (
     VGCItem,
     VGCTeam,
     VGCPokemonBuild,
+    Post,
 )
 
 from .serializers import (
@@ -113,6 +116,7 @@ from .serializers import (
     VGCItemSerializer,
     VGCTeamSerializer,
     VGCPokemonBuildSerializer,
+    PostSerializer,
 )
 
 
@@ -1505,6 +1509,59 @@ class UserProfileViewSet(
             *args,
             **kwargs
         )
+
+
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[
+            IsAuthenticated
+        ],
+        url_path='like'
+    )
+    def like_profile(
+        self,
+        request,
+        *args,
+        **kwargs
+    ):
+        profile = self.get_object()
+
+        if profile.user == request.user:
+            return Response(
+                {
+                    'error':
+                        'Você não pode curtir o próprio perfil.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        like = (
+            ProfileLike.objects
+            .filter(
+                user=request.user,
+                profile=profile
+            )
+            .first()
+        )
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            ProfileLike.objects.create(
+                user=request.user,
+                profile=profile
+            )
+            liked = True
+
+        return Response({
+            'liked':
+                liked,
+
+            'profile_likes_count':
+                profile.profile_likes.count(),
+        })
 
 
 class AchievementViewSet(
@@ -5316,3 +5373,199 @@ class VGCPokemonBuildViewSet(
             )
 
         return queryset
+
+
+class HomeViewSet(
+    viewsets.ViewSet
+):
+    permission_classes = [
+        AllowAny
+    ]
+
+    def list(
+        self,
+        request
+    ):
+        top_games_queryset = (
+            GameCatalog.objects
+            .annotate(
+                collectors=Count(
+                    'owned_copies__user',
+                    distinct=True
+                )
+            )
+            .filter(
+                collectors__gt=0
+            )
+            .prefetch_related(
+                'platforms'
+            )
+            .order_by(
+                '-collectors',
+                'title'
+            )[:10]
+        )
+
+        top_games = []
+
+        for game in top_games_queryset:
+            game_data = (
+                GameCatalogSerializer(
+                    game,
+                    context={
+                        'request': request
+                    }
+                ).data
+            )
+
+            game_data[
+                'collectors'
+            ] = game.collectors
+
+            top_games.append(
+                game_data
+            )
+
+        top_boardgames_queryset = (
+            BoardGameCatalog.objects
+            .annotate(
+                collectors=Count(
+                    'user_entries__user',
+                    filter=models.Q(
+                        user_entries__owned=True
+                    ),
+                    distinct=True
+                )
+            )
+            .filter(
+                collectors__gt=0
+            )
+            .order_by(
+                '-collectors',
+                'name'
+            )[:10]
+        )
+
+        top_boardgames = []
+
+        for game in top_boardgames_queryset:
+            game_data = (
+                BoardGameCatalogSerializer(
+                    game,
+                    context={
+                        'request': request
+                    }
+                ).data
+            )
+
+            game_data[
+                'collectors'
+            ] = game.collectors
+
+            top_boardgames.append(
+                game_data
+            )
+
+        featured_profiles_queryset = (
+            UserProfile.objects
+            .select_related(
+                'user'
+            )
+            .filter(
+                is_public=True
+            )
+            .order_by(
+                '-profile_views',
+                'user__username'
+            )[:6]
+        )
+
+        featured_profiles = (
+            UserProfileSerializer(
+                featured_profiles_queryset,
+                many=True,
+                context={
+                    'request': request
+                }
+            ).data
+        )
+
+        stats = {
+            'users': (
+                User.objects
+                .filter(
+                    is_active=True
+                )
+                .count()
+            ),
+
+            'game_collectors': (
+                UserOwnedGame.objects
+                .values(
+                    'user_id'
+                )
+                .distinct()
+                .count()
+            ),
+
+            'games_in_collections': (
+                UserOwnedGame.objects
+                .values(
+                    'user_id',
+                    'game_catalog_id'
+                )
+                .distinct()
+                .count()
+            ),
+
+            'boardgames_in_collections': (
+                UserBoardGame.objects
+                .filter(
+                    owned=True
+                )
+                .values(
+                    'user_id',
+                    'game_id'
+                )
+                .distinct()
+                .count()
+            ),
+        }
+
+        return Response({
+            'top_games':
+                top_games,
+
+            'top_boardgames':
+                top_boardgames,
+
+            'featured_profiles':
+                featured_profiles,
+
+            'stats':
+                stats,
+        })
+
+class PostViewSet(
+    viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = PostSerializer
+
+    permission_classes = [
+        AllowAny
+    ]
+
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        return (
+            Post.objects
+            .select_related('author')
+            .filter(
+                is_published=True
+            )
+            .order_by(
+                '-published_at',
+                '-created_at'
+            )
+        )

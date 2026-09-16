@@ -1,16 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  BookOpen,
   Camera,
   Check,
   Dice5,
   Edit3,
   Eye,
   Gamepad2,
+  Heart,
   LayoutDashboard,
   LogOut,
   Monitor,
   Save,
+  Sparkles,
+  Trophy,
   UserRound,
   X,
 } from 'lucide-react';
@@ -26,12 +30,17 @@ const EMPTY_PROFILE = {
   avatar: null,
   bio: '',
   profile_views: 0,
+  profile_likes_count: 0,
+  liked_by_me: false,
 };
 
 const EMPTY_PORTFOLIO = {
   videoGames: [],
   boardGames: [],
   consoles: [],
+  pokemon: [],
+  beyblades: [],
+  library: [],
 };
 
 function ProfilePage() {
@@ -48,6 +57,7 @@ function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -132,6 +142,60 @@ function ProfilePage() {
     );
   };
 
+  const getPokemonName = (entry) => {
+    return (
+      entry?.pokemon?.name ||
+      entry?.pokemon?.nome ||
+      'Pokémon'
+    );
+  };
+
+  const getPokemonImage = (entry) => {
+    return (
+      entry?.pokemon?.sprite ||
+      entry?.pokemon?.sprite_url ||
+      entry?.pokemon?.image ||
+      entry?.pokemon?.image_url ||
+      entry?.pokemon?.official_artwork ||
+      null
+    );
+  };
+
+  const getBeybladeName = (entry) => {
+    return (
+      entry?.variant?.variant_name ||
+      entry?.blade?.name ||
+      'Beyblade'
+    );
+  };
+
+  const getBeybladeImage = (entry) => {
+    return (
+      entry?.display_image ||
+      entry?.variant?.display_image ||
+      entry?.variant?.image ||
+      entry?.variant?.image_url ||
+      entry?.blade?.image ||
+      entry?.blade?.image_url ||
+      null
+    );
+  };
+
+  const getLibraryTitle = (entry) => {
+    return (
+      entry?.item?.title ||
+      'Item da biblioteca'
+    );
+  };
+
+  const getLibraryImage = (entry) => {
+    return (
+      entry?.item?.cover_image ||
+      entry?.item?.cover_url ||
+      null
+    );
+  };
+
   const getConsoleName = (consoleItem) => {
     return (
       consoleItem?.name ||
@@ -163,11 +227,22 @@ function ProfilePage() {
         setLoading(true);
         setErrorMessage('');
 
-        const [profileRes, gamesRes, boardRes, consoleRes] = await Promise.all([
+        const [
+          profileRes,
+          gamesRes,
+          boardRes,
+          consoleRes,
+          pokemonRes,
+          beybladeRes,
+          libraryRes,
+        ] = await Promise.all([
           api.get(`profiles/${currentProfileUser}/`),
-          api.get(`library/?username=${currentProfileUser}`),
-          api.get(`user-boardgames/?username=${currentProfileUser}`),
+          api.get(`owned-games/?username=${currentProfileUser}`),
+          api.get(`user-boardgames/?username=${currentProfileUser}&owned=true`),
           api.get(`consoles/?username=${currentProfileUser}`),
+          api.get(`user-pokemon/?username=${currentProfileUser}`),
+          api.get(`user-beyblades/?username=${currentProfileUser}`),
+          api.get(`reading-library/?username=${currentProfileUser}&owned=true`),
         ]);
 
         const receivedProfile = profileRes.data || EMPTY_PROFILE;
@@ -177,8 +252,11 @@ function ProfilePage() {
 
         setPortfolio({
           videoGames: extractList(gamesRes),
-          boardGames: extractList(boardRes),
+          boardGames: extractList(boardRes).filter((item) => item?.owned === true),
           consoles: extractList(consoleRes),
+          pokemon: extractList(pokemonRes),
+          beyblades: extractList(beybladeRes),
+          library: extractList(libraryRes).filter((item) => item?.owned === true),
         });
       } catch (error) {
         console.error('Erro ao carregar perfil:', error);
@@ -190,6 +268,44 @@ function ProfilePage() {
 
     fetchData();
   }, [currentProfileUser]);
+
+  const handleProfileLike = async () => {
+    if (isMyProfile || likeLoading) {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      alert('Entre na sua conta para curtir este perfil.');
+      return;
+    }
+
+    try {
+      setLikeLoading(true);
+
+      const response = await api.post(
+        `profiles/${encodeURIComponent(currentProfileUser)}/like/`
+      );
+
+      setProfileData((current) => ({
+        ...current,
+        liked_by_me: Boolean(response.data?.liked),
+        profile_likes_count: Number(
+          response.data?.profile_likes_count || 0
+        ),
+      }));
+    } catch (error) {
+      console.error('Erro ao curtir perfil:', error);
+
+      alert(
+        error?.response?.data?.error ||
+          'Não foi possível atualizar a curtida do perfil.'
+      );
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -270,7 +386,10 @@ function ProfilePage() {
   const totalItems =
     portfolio.videoGames.length +
     portfolio.boardGames.length +
-    portfolio.consoles.length;
+    portfolio.consoles.length +
+    portfolio.pokemon.length +
+    portfolio.beyblades.length +
+    portfolio.library.length;
 
   const overviewItems = useMemo(() => {
     return [
@@ -292,7 +411,25 @@ function ProfilePage() {
         title: getConsoleName(item),
         image: getConsoleImage(item),
       })),
-    ].slice(0, 8);
+      ...portfolio.pokemon.slice(0, 2).map((item) => ({
+        id: `pokemon-${item.id}`,
+        type: item.is_shiny ? 'Pokémon Shiny' : 'Pokémon',
+        title: getPokemonName(item),
+        image: getPokemonImage(item),
+      })),
+      ...portfolio.beyblades.slice(0, 2).map((item) => ({
+        id: `beyblade-${item.id}`,
+        type: 'Beyblade',
+        title: getBeybladeName(item),
+        image: getBeybladeImage(item),
+      })),
+      ...portfolio.library.slice(0, 2).map((item) => ({
+        id: `library-${item.id}`,
+        type: item?.item?.item_type_display || 'Biblioteca',
+        title: getLibraryTitle(item),
+        image: getLibraryImage(item),
+      })),
+    ].slice(0, 12);
   }, [portfolio]);
 
   if (loading) {
@@ -379,16 +516,40 @@ function ProfilePage() {
                 <h1>{profileData.username || currentProfileUser}</h1>
               </div>
 
-              {isMyProfile && (
-                <button
-                  type="button"
-                  className="profile-logout-button"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={17} />
-                  Sair
-                </button>
-              )}
+              <div className="profile-title-actions">
+                {!isMyProfile && (
+                  <button
+                    type="button"
+                    className={`profile-like-button ${
+                      profileData.liked_by_me ? 'is-liked' : ''
+                    }`}
+                    onClick={handleProfileLike}
+                    disabled={likeLoading}
+                    aria-pressed={profileData.liked_by_me}
+                  >
+                    <Heart
+                      size={18}
+                      fill={profileData.liked_by_me ? 'currentColor' : 'none'}
+                    />
+                    {likeLoading
+                      ? 'Salvando...'
+                      : profileData.liked_by_me
+                        ? 'Curtido'
+                        : 'Curtir perfil'}
+                  </button>
+                )}
+
+                {isMyProfile && (
+                  <button
+                    type="button"
+                    className="profile-logout-button"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={17} />
+                    Sair
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="profile-bio">
@@ -481,6 +642,30 @@ function ProfilePage() {
               </article>
 
               <article className="profile-stat-card">
+                <Sparkles size={20} />
+                <strong>{portfolio.pokemon.length}</strong>
+                <span>Pokémon</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <Trophy size={20} />
+                <strong>{portfolio.beyblades.length}</strong>
+                <span>Beyblades</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <BookOpen size={20} />
+                <strong>{portfolio.library.length}</strong>
+                <span>Biblioteca</span>
+              </article>
+
+              <article className="profile-stat-card">
+                <Heart size={20} />
+                <strong>{profileData.profile_likes_count || 0}</strong>
+                <span>Curtidas</span>
+              </article>
+
+              <article className="profile-stat-card">
                 <Eye size={20} />
                 <strong>{profileData.profile_views || 0}</strong>
                 <span>Visualizações</span>
@@ -541,6 +726,36 @@ function ProfilePage() {
             <Monitor size={17} />
             Consoles
             <span>{portfolio.consoles.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('pokemon')}
+            className={activeTab === 'pokemon' ? 'active' : ''}
+          >
+            <Sparkles size={17} />
+            Pokémon
+            <span>{portfolio.pokemon.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('beyblades')}
+            className={activeTab === 'beyblades' ? 'active' : ''}
+          >
+            <Trophy size={17} />
+            Beyblades
+            <span>{portfolio.beyblades.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('library')}
+            className={activeTab === 'library' ? 'active' : ''}
+          >
+            <BookOpen size={17} />
+            Biblioteca
+            <span>{portfolio.library.length}</span>
           </button>
         </nav>
 
@@ -716,6 +931,132 @@ function ProfilePage() {
                   <Monitor size={34} />
                   <h3>Nenhum console encontrado</h3>
                   <p>Os consoles adicionados ao acervo aparecerão aqui.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'pokemon' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>POKÉDEX</span>
+                  <h2>Pokémon da coleção</h2>
+                </div>
+
+                <Sparkles size={24} />
+              </div>
+
+              {portfolio.pokemon.length > 0 ? (
+                <div className="profile-grid">
+                  {portfolio.pokemon.map((entry) => (
+                    <article key={entry.id} className="profile-card">
+                      <img
+                        src={getImageUrl(
+                          getPokemonImage(entry),
+                          getPokemonName(entry)
+                        )}
+                        alt={getPokemonName(entry)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>{entry.is_shiny ? 'Shiny' : 'Capturado'}</span>
+                        <h3>{getPokemonName(entry)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <Sparkles size={34} />
+                  <h3>Nenhum Pokémon encontrado</h3>
+                  <p>Os Pokémon registrados na Pokédex aparecerão aqui.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'beyblades' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>BEYBLADE</span>
+                  <h2>Beyblades do acervo</h2>
+                </div>
+
+                <Trophy size={24} />
+              </div>
+
+              {portfolio.beyblades.length > 0 ? (
+                <div className="profile-grid">
+                  {portfolio.beyblades.map((entry) => (
+                    <article key={entry.id} className="profile-card">
+                      <img
+                        src={getImageUrl(
+                          getBeybladeImage(entry),
+                          getBeybladeName(entry)
+                        )}
+                        alt={getBeybladeName(entry)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>
+                          {entry.quantity > 1
+                            ? `${entry.quantity} unidades`
+                            : 'Beyblade'}
+                        </span>
+                        <h3>{getBeybladeName(entry)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <Trophy size={34} />
+                  <h3>Nenhuma Beyblade encontrada</h3>
+                  <p>As Beyblades do acervo aparecerão aqui.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'library' && (
+            <>
+              <div className="profile-content-heading">
+                <div>
+                  <span>BIBLIOTECA</span>
+                  <h2>Livros, mangás e HQs do acervo</h2>
+                </div>
+
+                <BookOpen size={24} />
+              </div>
+
+              {portfolio.library.length > 0 ? (
+                <div className="profile-grid">
+                  {portfolio.library.map((entry) => (
+                    <article key={entry.id} className="profile-card">
+                      <img
+                        src={getImageUrl(
+                          getLibraryImage(entry),
+                          getLibraryTitle(entry)
+                        )}
+                        alt={getLibraryTitle(entry)}
+                      />
+
+                      <div className="profile-card-overlay">
+                        <span>
+                          {entry?.item?.item_type_display || 'Biblioteca'}
+                        </span>
+                        <h3>{getLibraryTitle(entry)}</h3>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="profile-empty-state">
+                  <BookOpen size={34} />
+                  <h3>Nenhum item encontrado</h3>
+                  <p>Os itens da biblioteca que fazem parte do acervo aparecerão aqui.</p>
                 </div>
               )}
             </>

@@ -40,6 +40,8 @@ from .views import (
     VGCItemViewSet,
     VGCTeamViewSet,
     VGCPokemonBuildViewSet,
+    PostViewSet,
+    HomeViewSet,
     CustomAuthToken,
 )
 
@@ -233,6 +235,18 @@ router.register(
     r'beyblade-builds',
     BeybladeBuildViewSet,
     basename='beyblade-builds'
+)
+
+router.register(
+    r'posts',
+    PostViewSet,
+    basename='posts'
+)
+
+router.register(
+    r'home',
+    HomeViewSet,
+    basename='home'
 )
 
 

@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 
 import Home from "./pages/HomePage.jsx";
+import PostPage from "./pages/PostPage.jsx";
 import BoardGamePage from "./pages/BoardGamePage";
 import BoardGameDetailsPage from "./pages/BoardGameDetailPage.jsx";
 import ConsolesPage from "./pages/ConsolesPage.jsx";
@@ -14,11 +15,9 @@ import PokemonHallOfFame from "./pages/PokemonHallOfFame.jsx";
 import SuggestionsPage from "./pages/SuggestionsPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ProfilePage from "./pages/ProfilePage.jsx";
-
 import GamesPage from "./pages/GamesPage.jsx";
 import LibraryPage from "./pages/LibraryPage.jsx";
 import BeybladePage from "./pages/BeybladePage.jsx";
-
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated =
@@ -31,11 +30,9 @@ const PrivateRoute = ({ children }) => {
     : <Navigate to="/register" />;
 };
 
-
 function App() {
   return (
     <Routes>
-
       {/* RAIZ */}
       <Route
         path="/"
@@ -44,20 +41,23 @@ function App() {
         }
       />
 
-
       {/* HOME */}
       <Route
         path="/home"
         element={<Home />}
       />
 
+      {/* PUBLICAÇÕES */}
+      <Route
+        path="/posts/:slug"
+        element={<PostPage />}
+      />
 
       {/* LOGIN */}
       <Route
         path="/login"
         element={<LoginPage />}
       />
-
 
       {/* CADASTRO */}
       <Route
@@ -70,13 +70,11 @@ function App() {
         element={<RegisterPage />}
       />
 
-
       {/* PERFIL */}
       <Route
         path="/profile/:username?"
         element={<ProfilePage />}
       />
-
 
       {/* JOGOS DE TABULEIRO */}
       <Route
@@ -91,13 +89,11 @@ function App() {
         }
       />
 
-
       {/* CONSOLES */}
       <Route
         path="/consoles"
         element={<ConsolesPage />}
       />
-
 
       {/* JOGOS */}
       <Route
@@ -105,20 +101,17 @@ function App() {
         element={<GamesPage />}
       />
 
-
       {/* BIBLIOTECA */}
       <Route
         path="/library"
         element={<LibraryPage />}
       />
 
-
       {/* BEYBLADE */}
       <Route
         path="/beyblade"
         element={<BeybladePage />}
       />
-
 
       {/* POKÉMON */}
       <Route
@@ -131,13 +124,11 @@ function App() {
         element={<PokemonHallOfFame />}
       />
 
-
       {/* SUGESTÕES */}
       <Route
         path="/sugestoes"
         element={<SuggestionsPage />}
       />
-
     </Routes>
   );
 }

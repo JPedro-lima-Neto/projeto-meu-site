@@ -40,6 +40,7 @@ from .models import (
     UserBeyLockChip,
     BeybladeBuild,
     BeybladeRelease,
+    Post,
 )
 
 from .views import (
@@ -1779,6 +1780,104 @@ class BeybladeReleaseAdmin(
                 'fields': (
                     'source_url',
                     'notes',
+                )
+            }
+        ),
+    )
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'category',
+        'author',
+        'is_published',
+        'is_featured',
+        'published_at',
+        'created_at',
+    )
+
+    list_filter = (
+        'category',
+        'is_published',
+        'is_featured',
+        'published_at',
+        'created_at',
+    )
+
+    search_fields = (
+        'title',
+        'excerpt',
+        'content',
+        'author__username',
+    )
+
+    prepopulated_fields = {
+        'slug': (
+            'title',
+        ),
+    }
+
+    autocomplete_fields = (
+        'author',
+    )
+
+    ordering = (
+        '-published_at',
+        '-created_at',
+    )
+
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+    )
+
+    fieldsets = (
+        (
+            'Publicação',
+            {
+                'fields': (
+                    'title',
+                    'slug',
+                    'author',
+                    'category',
+                )
+            }
+        ),
+        (
+            'Conteúdo',
+            {
+                'fields': (
+                    'excerpt',
+                    'content',
+                )
+            }
+        ),
+        (
+            'Capa',
+            {
+                'fields': (
+                    'cover_image',
+                    'cover_url',
+                )
+            }
+        ),
+        (
+            'Publicação e destaque',
+            {
+                'fields': (
+                    'is_published',
+                    'is_featured',
+                    'published_at',
+                )
+            }
+        ),
+        (
+            'Sistema',
+            {
+                'fields': (
+                    'created_at',
+                    'updated_at',
                 )
             }
         ),
